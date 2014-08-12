@@ -22,7 +22,7 @@
 #include <QString>
 #include <QHBoxLayout>
 #include <QMenu>
-#include "core.h"
+#include "core/core.h"
 #include "widget/form/addfriendform.h"
 #include "widget/form/settingsform.h"
 #include "widget/form/filesform.h"
@@ -83,7 +83,7 @@ private slots:
     void onFailedToStartCore();
     void onUsernameChanged(const QString& newUsername, const QString& oldUsername);
     void onStatusMessageChanged(const QString& newStatusMessage, const QString& oldStatusMessage);
-    void onUsernameChanged();
+    //void onUsernameChanged();
     void onStatusMessageChanged();
     void setUsername(const QString& username);
     void setStatusMessage(const QString &statusMessage);

@@ -15,7 +15,7 @@
 */
 
 #include "netcamview.h"
-#include "core.h"
+#include "core/av.h"
 #include "widget.h"
 #include <QApplication>
 #include <QtConcurrent/QtConcurrent>
@@ -72,14 +72,14 @@ void NetCamView::updateDisplay(vpx_image* frame)
 
     Core* core = Widget::getInstance()->getCore();
 
-    core->increaseVideoBusyness();
+    //core->increaseVideoBusyness();
 
     QImage img = convert(*frame);
 
     vpx_img_free(frame);
     displayLabel->setPixmap(QPixmap::fromImage(img));
 
-    core->decreaseVideoBusyness();
+    //core->decreaseVideoBusyness();
 }
 
 QImage NetCamView::convert(vpx_image& frame)

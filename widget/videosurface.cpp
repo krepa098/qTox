@@ -15,14 +15,14 @@
 */
 
 #include "videosurface.h"
-#include "core.h"
+#include "core/core.h"
 #include <QVideoFrame>
 #include <QDebug>
 
 VideoSurface::VideoSurface()
     : QAbstractVideoSurface()
 {
-    vpx_img_alloc(&input, VPX_IMG_FMT_YV12, TOXAV_MAX_VIDEO_WIDTH, TOXAV_MAX_VIDEO_HEIGHT, 1);
+    //vpx_img_alloc(&input, VPX_IMG_FMT_YV12, TOXAV_MAX_VIDEO_WIDTH, TOXAV_MAX_VIDEO_HEIGHT, 1);
 }
 
 bool VideoSurface::start(const QVideoSurfaceFormat &format)

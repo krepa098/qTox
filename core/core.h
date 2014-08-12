@@ -17,17 +17,76 @@
 #ifndef CORE_H
 #define CORE_H
 
+#include <QFile>
 #include <QObject>
+#include <QThread>
+#include <QTimer>
+#include <QMutex>
+
+#define CONFIG_FILE_NAME "data"
+
+struct Tox;
+
+struct ToxFile
+{
+    enum FileDirection {
+        SENDING,
+        RECEIVING
+    };
+
+    int friendId;
+    int fileNum;
+    QString fileName;
+    QString filePath;
+    int filesize;
+    QFile* file;
+    FileDirection direction;
+};
+
+enum Status : int
+{
+    Online = 0,
+    Away,
+    Busy,
+    Offline
+};
 
 class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core(QObject *parent = 0);
+    explicit Core();
+    ~Core();
+
+    static int getMaxNameLength();
+
+    QString getUsername();
+    void setUsername(const QString& username);
 
 signals:
+    void usernameChanged(QString username);
 
 public slots:
+    void start();
+    void deleteLater();
+
+private slots:
+    void onTimeout();
+
+protected:
+    // tox wrappers
+    void loadConfig();
+    void initCore();
+    void setupCallbacks();
+    void kill();
+    void toxDo();
+
+
+private:
+    Tox* tox;
+
+    QMutex mutex;
+    QTimer ticker;
 
 };
 

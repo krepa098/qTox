@@ -121,7 +121,7 @@ void FriendWidget::contextMenuEvent(QContextMenuEvent * event)
         else if (groupActions.contains(selectedItem))
         {
             Group* group = groupActions[selectedItem];
-            Widget::getInstance()->getCore()->groupInviteFriend(friendId, group->groupId);
+            //Widget::getInstance()->getCore()->groupInviteFriend(friendId, group->groupId);
         }
     }
 }

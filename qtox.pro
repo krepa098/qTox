@@ -75,7 +75,6 @@ HEADERS  += widget/form/addfriendform.h \
     group.h \
     grouplist.h \
     settings.h \
-    core.h \
     friendlist.h \
     cdata.h \
     cstring.h \
@@ -108,7 +107,6 @@ SOURCES += \
     widget/friendwidget.cpp \
     widget/groupwidget.cpp \
     widget/widget.cpp \
-    core.cpp \
     friend.cpp \
     friendlist.cpp \
     group.cpp \

@@ -16,7 +16,7 @@
 
 #include "filetransfertwidget.h"
 #include "widget.h"
-#include "core.h"
+#include "core/core.h"
 #include "math.h"
 #include "style.h"
 #include <QFileDialog>
@@ -244,12 +244,12 @@ void FileTransfertWidget::onFileTransferFinished(ToxFile File)
 
 void FileTransfertWidget::cancelTransfer()
 {
-    Widget::getInstance()->getCore()->cancelFileSend(friendId, fileNum);
+    //Widget::getInstance()->getCore()->cancelFileSend(friendId, fileNum);
 }
 
 void FileTransfertWidget::rejectRecvRequest()
 {
-    Widget::getInstance()->getCore()->rejectFileRecvRequest(friendId, fileNum);
+    //Widget::getInstance()->getCore()->rejectFileRecvRequest(friendId, fileNum);
     onFileTransferCancelled(friendId, fileNum, direction);
 }
 
@@ -293,17 +293,17 @@ void FileTransfertWidget::acceptRecvRequest()
     bottomright->setStyleSheet(pauseFileButtonStylesheet);
     bottomright->disconnect();
     connect(bottomright, SIGNAL(clicked()), this, SLOT(pauseResumeRecv()));
-    Widget::getInstance()->getCore()->acceptFileRecvRequest(friendId, fileNum, path);
+    //Widget::getInstance()->getCore()->acceptFileRecvRequest(friendId, fileNum, path);
 }
 
 void FileTransfertWidget::pauseResumeRecv()
 {
-    Widget::getInstance()->getCore()->pauseResumeFileRecv(friendId, fileNum);
+    //Widget::getInstance()->getCore()->pauseResumeFileRecv(friendId, fileNum);
 }
 
 void FileTransfertWidget::pauseResumeSend()
 {
-    Widget::getInstance()->getCore()->pauseResumeFileSend(friendId, fileNum);
+    //Widget::getInstance()->getCore()->pauseResumeFileSend(friendId, fileNum);
 }
 
 void FileTransfertWidget::paintEvent(QPaintEvent *)

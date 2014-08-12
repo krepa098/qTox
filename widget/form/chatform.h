@@ -29,7 +29,7 @@
 
 #include "widget/tool/chattextedit.h"
 #include "ui_mainwindow.h"
-#include "core.h"
+#include "core/core.h"
 #include "widget/netcamview.h"
 
 // Spacing in px inserted when the author of the last message changes
