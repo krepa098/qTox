@@ -88,7 +88,9 @@ HEADERS  += widget/form/addfriendform.h \
     smileypack.h \
     widget/emoticonswidget.h \
     style.h \
-    widget/adjustingscrollarea.h
+    widget/adjustingscrollarea.h \
+    core/core.h \
+    core/av.h
 
 SOURCES += \
     widget/form/addfriendform.cpp \
@@ -124,4 +126,6 @@ SOURCES += \
     smileypack.cpp \
     widget/emoticonswidget.cpp \
     style.cpp \
-    widget/adjustingscrollarea.cpp
+    widget/adjustingscrollarea.cpp \
+    core/core.cpp \
+    core/av.cpp
