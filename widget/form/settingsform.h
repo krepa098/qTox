@@ -41,7 +41,7 @@ public:
     void show(Ui::MainWindow &ui);
 
 public slots:
-    void setFriendAddress(const QString& friendAddress);
+    void onUserIdChanged(QString userid);
 
 private slots:
     void onTestVideoClicked();

@@ -88,11 +88,6 @@ SettingsForm::~SettingsForm()
 {
 }
 
-void SettingsForm::setFriendAddress(const QString& friendAddress)
-{
-    id.setText(friendAddress);
-}
-
 void SettingsForm::show(Ui::MainWindow &ui)
 {
     name.setText(ui.nameLabel->text());
@@ -117,6 +112,11 @@ void SettingsForm::copyIdClicked()
 {
     id.selectAll();;
     QApplication::clipboard()->setText(id.toPlainText());
+}
+
+void SettingsForm::onUserIdChanged(QString userid)
+{
+    id.setText(userid);
 }
 
 void SettingsForm::onUseTranslationUpdated()

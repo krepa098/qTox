@@ -63,12 +63,30 @@ public:
     QString getUsername();
     void setUsername(const QString& username);
 
+
+    void saveConfig();
 signals:
+    void userIdChanged(QString userId);
     void usernameChanged(QString username);
+    void userStatusMessageChanged(QString msg);
+    void friendAdded(int friendId, QString username);
+    void statusChanged(Status status);
+    void friendStatusChanged(int friendId, Status status);
+    void friendStatusMessageChanged(int friendId, QString msg);
+    void friendUsernameChanged(int friendId, QString newName);
+    void friendRequestReceived(QString publicKey, QString msg);
+    void friendMessageReceived(int friendnumber, QString msg);
 
 public slots:
     void start();
     void deleteLater();
+
+    void acceptFriendRequest(QString clientId);
+    void sendFriendRequest(QString address, QString msg);
+    void removeFriend(int friendnumber);
+    void sendMessage(int friendnumber, QString msg);
+    void setUserStatusMessage(QString msg);
+    void changeStatus(Status newStatus);
 
 private slots:
     void onTimeout();
@@ -80,6 +98,11 @@ protected:
     void setupCallbacks();
     void kill();
     void toxDo();
+    void queryFriends();
+    void bootstrap();
+    bool isConnected();
+    void queryUserId();
+    void queryUserStatusMessage();
 
 
 private:
@@ -87,6 +110,8 @@ private:
 
     QMutex mutex;
     QTimer ticker;
+
+    Status status;
 
 };
 
