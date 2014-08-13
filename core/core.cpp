@@ -15,7 +15,6 @@
 */
 
 #include "core.h"
-#include "settings.h"
 #include <QDebug>
 #include <QEventLoop>
 #include <QCoreApplication>
@@ -113,13 +112,14 @@ void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, vo
  * CORE
  * ====================*/
 
-Core::Core()
+Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
     : QObject(nullptr)
     , tox(nullptr)
     , status(Offline)
+    , ipV6Enabled(enableIPv6)
+    , bootstrapServers(dhtServers)
 {
     initCore();
-    loadConfig();
     setupCallbacks();
 }
 
@@ -166,25 +166,27 @@ void Core::onTimeout()
     }
 }
 
-void Core::loadConfig()
+void Core::loadConfig(const QString &filename)
 {
     QMutexLocker lock(&mutex);
 
-    QFile config(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
+    QFile config(filename);
     config.open(QFile::ReadOnly);
     QByteArray configData = config.readAll();
     if (tox_load(tox, TOXU8(configData.data()), configData.size()) == 0)
         qDebug() << "tox_load: success";
     else
-        qWarning() << "tox_load: Unable to load config " << Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME;
+        qWarning() << "tox_load: Unable to load config " << filename;
 }
 
-void Core::saveConfig()
+void Core::saveConfig(const QString& filename)
 {
+    QMutexLocker lock(&mutex);
+
     QByteArray configData(tox_size(tox), 0);
     tox_save(tox, TOXU8(configData.data()));
 
-    QFile config(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
+    QFile config(filename);
     config.open(QFile::WriteOnly | QFile::Truncate);
     config.write(configData);
 }
@@ -193,7 +195,7 @@ void Core::initCore()
 {
     QMutexLocker lock(&mutex);
 
-    if ((tox = tox_new(Settings::getInstance().getEnableIPv6() ? 1 : 0)) == nullptr)
+    if ((tox = tox_new(ipV6Enabled ? 1 : 0)) == nullptr)
         qCritical() << "tox_new: Cannot initialize core";
     else
         qDebug() << "tox_new: success";
@@ -244,12 +246,12 @@ void Core::bootstrap()
 {
     QMutexLocker lock(&mutex);
 
-    Settings::DhtServer server = Settings::getInstance().getDhtServerList().at(1);
+    ToxDhtServer server = bootstrapServers.at(0);
 
     int ret = tox_bootstrap_from_address(tox, server.address.toLatin1().data(),
-                                         Settings::getInstance().getEnableIPv6(),
+                                         ipV6Enabled ? 1 : 0,
                                          qToBigEndian(server.port),
-                                         TOXU8(server.userId.data()));
+                                         TOXU8(server.publicKey.data()));
 
     if (ret == 1)
         qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;

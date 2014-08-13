@@ -22,6 +22,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QMutex>
+#include <QVector>
 
 #define CONFIG_FILE_NAME "data"
 
@@ -51,11 +52,18 @@ enum Status : int
     Offline
 };
 
+struct ToxDhtServer
+{
+    QString address;
+    quint16 port;
+    QString publicKey;
+};
+
 class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core();
+    explicit Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers);
     ~Core();
 
     static int getMaxNameLength();
@@ -63,8 +71,8 @@ public:
     QString getUsername();
     void setUsername(const QString& username);
 
-
-    void saveConfig();
+    void loadConfig(const QString& filename);
+    void saveConfig(const QString& filename);
 signals:
     void userIdChanged(QString userId);
     void usernameChanged(QString username);
@@ -93,7 +101,6 @@ private slots:
 
 protected:
     // tox wrappers
-    void loadConfig();
     void initCore();
     void setupCallbacks();
     void kill();
@@ -112,6 +119,8 @@ private:
     QTimer ticker;
 
     Status status;
+    bool ipV6Enabled;
+    QVector<ToxDhtServer> bootstrapServers;
 
 };
 

@@ -165,8 +165,14 @@ Widget::Widget(QWidget *parent)
     qRegisterMetaType<ToxFile>("ToxFile");
     qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
 
+    ToxDhtServer server;
+    server.address = Settings::getInstance().getDhtServerList().at(0).address;
+    server.port = Settings::getInstance().getDhtServerList().at(0).port;
+    server.publicKey = Settings::getInstance().getDhtServerList().at(0).userId;
+
     coreThread = new QThread();
-    core = new Core();
+    core = new Core(Settings::getInstance().getEnableIPv6(), QVector<ToxDhtServer>() << server);
+    core->loadConfig(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
     core->moveToThread(coreThread);
     connect(coreThread, &QThread::finished, core, &Core::deleteLater);
     connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
@@ -226,7 +232,7 @@ Widget::Widget(QWidget *parent)
 
 Widget::~Widget()
 {
-    core->saveConfig();
+    core->saveConfig(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
     instance = nullptr;
     coreThread->exit();
     coreThread->wait();
