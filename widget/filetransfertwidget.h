@@ -50,6 +50,7 @@ private slots:
 
 private:
     QString getHumanReadableSize(int size);
+    void hideControlsAndDisconnect();
 
 private:
     QLabel *pic, *filename, *size, *speed, *eta;

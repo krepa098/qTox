@@ -169,6 +169,21 @@ void Core::callbackFileData(Tox* tox, int32_t friendnumber, uint8_t filenumber, 
         transf->write(recData);
     }
 }
+
+void Core::callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata)
+{
+    Q_UNUSED(tox)
+
+    QByteArray filenameData(CPtr(filename), filename_length);
+    ToxFileTransfer::Ptr trans = ToxFileTransfer::create(friendnumber, filenumber, QString::fromUtf8(filenameData), ToxFileTransferInfo::Receiving);
+
+    if (trans->isValid())
+    {
+        fileTransfers.insert(filenumber, trans);
+        emit fileTransferRequested(trans->getInfo());
+    }
+}
+
 /* ====================
  * CORE
  * ====================*/
@@ -280,6 +295,7 @@ void Core::setupCallbacks()
     tox_callback_name_change(tox, callbackNameChanged, this);
     tox_callback_file_control(tox, callbackFileControl, this);
     tox_callback_file_data(tox, callbackFileData, this);
+    tox_callback_file_send_request(tox, callbackFileSendRequest, this);
 }
 
 void Core::kill()

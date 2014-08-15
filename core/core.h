@@ -129,6 +129,7 @@ private:
     static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata);
     static void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata);
     static void callbackFileData(Tox *tox, int32_t friendnumber, uint8_t filenumber, const uint8_t *data, uint16_t length, void *userdata);
+    static void callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata);
 
 private:
     Tox* tox;

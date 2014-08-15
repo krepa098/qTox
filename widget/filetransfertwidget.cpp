@@ -31,7 +31,10 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
       friendId(status.friendnumber),
       direction(status.direction)
 {
-    pic=new QLabel(), filename=new QLabel(), size=new QLabel(), speed=new QLabel(), eta=new QLabel();
+    setObjectName("default");
+    setStyleSheet(Style::get(":/ui/fileTransferWidget/fileTransferWidget.css"));
+
+    pic=new QLabel(), filename=new QLabel(this), size=new QLabel(this), speed=new QLabel(this), eta=new QLabel(this);
     topright = new QPushButton(), bottomright = new QPushButton();
     progress = new QProgressBar();
     mainLayout = new QHBoxLayout(), textLayout = new QHBoxLayout();
@@ -39,13 +42,6 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
     buttonWidget = new QWidget();
     QFont prettysmall;
     prettysmall.setPixelSize(10);
-    this->setObjectName("default");
-    this->setStyleSheet(Style::get(":/ui/fileTransferWidget/fileTransferWidget.css"));
-    QPalette greybg;
-    greybg.setColor(QPalette::Window, QColor(209,209,209));
-    greybg.setColor(QPalette::Base, QColor(150,150,150));
-    setPalette(greybg);
-    setAutoFillBackground(true);
 
     setMinimumSize(250,58);
     setMaximumHeight(58);
@@ -68,7 +64,7 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
     progress->setTextVisible(false);
     QPalette whitebg;
     whitebg.setColor(QPalette::Window, QColor(255,255,255));
-    buttonWidget->setPalette(whitebg);
+    //buttonWidget->setPalette(whitebg);
     buttonWidget->setAutoFillBackground(true);
     buttonWidget->setLayout(buttonLayout);
 
@@ -84,13 +80,13 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
         connect(bottomright, SIGNAL(clicked()), this, SLOT(pauseResumeSend()));
 
         QPixmap preview;
-//        File.file->seek(0);
-//        if (preview.loadFromData(File.file->readAll()))
-//        {
-//            preview = preview.scaledToHeight(40);
-//            pic->setPixmap(preview);
-//        }
-//        File.file->seek(0);
+        //        File.file->seek(0);
+        //        if (preview.loadFromData(File.file->readAll()))
+        //        {
+        //            preview = preview.scaledToHeight(40);
+        //            pic->setPixmap(preview);
+        //        }
+        //        File.file->seek(0);
     }
     else
     {
@@ -149,32 +145,47 @@ QString FileTransfertWidget::getHumanReadableSize(int size)
     int exp = 0;
     if (size)
         exp = std::min( (int) (log(size) / log(1024)), (int) (sizeof(suffix) / sizeof(suffix[0]) - 1));
-    return QString().setNum(size / pow(1024, exp),'f',3).append(suffix[exp]);
+    return QString().setNum(size / pow(1024, exp),'f',2).append(suffix[exp]);
+}
+
+void FileTransfertWidget::hideControlsAndDisconnect()
+{
+    disconnect(Widget::getInstance()->getCore(), &Core::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
+
+    progress->hide();
+    speed->hide();
+    eta->hide();
+    topright->hide();
+    bottomright->hide();
+    buttonLayout->setContentsMargins(0,0,0,0);
 }
 
 void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo info)
 {
     if (info.filenumber != fileNum)
-            return;
+        return;
 
-    QPalette pal;
     switch(info.status)
     {
     case ToxFileTransferInfo::Finished:
+        setObjectName("success");
+        hideControlsAndDisconnect();
         break;
     case ToxFileTransferInfo::Canceled:
-        pal.setColor(QPalette::Window, QColor(0,255,0));
-        setPalette(pal);
+        setObjectName("error");
+        hideControlsAndDisconnect();
         break;
     case ToxFileTransferInfo::Paused:
-        pal.setColor(QPalette::Window, QColor(255,255,0));
-        setPalette(pal);
+    case ToxFileTransferInfo::Transit:
+        setObjectName("default");
         break;
     }
 
-    this->hide();
-    this->show();
+    //reevaluate style
+    setStyleSheet(QString());
+    setStyleSheet(Style::get(":/ui/fileTransferWidget/fileTransferWidget.css"));
 
+    // calculate progress, speed etc.
     QDateTime newtime = QDateTime::currentDateTime();
     int timediff = lastUpdate.secsTo(newtime);
     if (timediff <= 0)
@@ -206,7 +217,7 @@ void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo info)
 void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status)
 {
     if (FileNum != fileNum || FriendId != friendId || status.direction != direction)
-            return;
+        return;
     buttonLayout->setContentsMargins(0,0,0,0);
     disconnect(topright);
     disconnect(Widget::getInstance()->getCore(),0,this,0);
@@ -217,8 +228,8 @@ void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, Tox
     bottomright->hide();
     QPalette whiteText;
     whiteText.setColor(QPalette::WindowText, Qt::white);
-    filename->setPalette(whiteText);
-    size->setPalette(whiteText);
+    //filename->setPalette(whiteText);
+    //size->setPalette(whiteText);
     this->setObjectName("error");
     this->style()->polish(this);
 
@@ -229,39 +240,24 @@ void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, Tox
 void FileTransfertWidget::onFileTransferFinished(ToxFileTransferInfo File)
 {
     if (File.filenumber != fileNum || File.friendnumber != friendId || File.direction != direction)
-            return;
+        return;
     topright->disconnect();
     disconnect(Widget::getInstance()->getCore(),0,this,0);
-    progress->hide();
-    speed->hide();
-    eta->hide();
-    topright->hide();
-    bottomright->hide();
-    buttonLayout->setContentsMargins(0,0,0,0);
-    QPalette whiteText;
-    whiteText.setColor(QPalette::WindowText, Qt::white);
-    filename->setPalette(whiteText);
-    size->setPalette(whiteText);
-    this->setObjectName("success");
-    this->style()->polish(this);
 
-    //Toggle window visibility to fix draw order bug
-    this->hide();
-    this->show();
 
     if (File.direction == ToxFileTransferInfo::Receiving)
     {
         QPixmap preview;
-//        QFile previewFile(File.filePath);
-//        if (previewFile.open(QIODevice::ReadOnly) && previewFile.size() <= 1024*1024*25) // Don't preview big (>25MiB) images
-//        {
-//            if (preview.loadFromData(previewFile.readAll()))
-//            {
-//                preview = preview.scaledToHeight(40);
-//                pic->setPixmap(preview);
-//            }
-//            previewFile.close();
-//        }
+        //        QFile previewFile(File.filePath);
+        //        if (previewFile.open(QIODevice::ReadOnly) && previewFile.size() <= 1024*1024*25) // Don't preview big (>25MiB) images
+        //        {
+        //            if (preview.loadFromData(previewFile.readAll()))
+        //            {
+        //                preview = preview.scaledToHeight(40);
+        //                pic->setPixmap(preview);
+        //            }
+        //            previewFile.close();
+        //        }
     }
 }
 
