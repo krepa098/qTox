@@ -34,12 +34,12 @@ class FileTransfertWidget : public QWidget
     Q_OBJECT
 
 public:
-    FileTransfertWidget(ToxFile File);
+    FileTransfertWidget(ToxFileTransferInfo status);
 
 public slots:
-    void onFileTransferInfo(int FriendId, int FileNum, int64_t Filesize, int64_t BytesSent, ToxFile::FileDirection Direction);
-    void onFileTransferCancelled(int FriendId, int FileNum, ToxFile::FileDirection Direction);
-    void onFileTransferFinished(ToxFile File);
+    void onFileTransferInfo(int FriendId, int FileNum, ToxFileTransferInfo status);
+    void onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status);
+    void onFileTransferFinished(ToxFileTransferInfo File);
 
 private slots:
     void cancelTransfer();
@@ -63,7 +63,7 @@ private:
     int fileNum;
     int friendId;
     QString savePath;
-    ToxFile::FileDirection direction;
+    ToxFileTransferInfo::Direction direction;
     QString stopFileButtonStylesheet, pauseFileButtonStylesheet, acceptFileButtonStylesheet;
     void paintEvent(QPaintEvent *);
 };

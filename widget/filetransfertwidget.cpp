@@ -24,9 +24,12 @@
 #include <QPainter>
 #include <QMessageBox>
 
-FileTransfertWidget::FileTransfertWidget(ToxFile File)
-    : lastUpdate{QDateTime::currentDateTime()}, lastBytesSent{0},
-      fileNum{File.fileNum}, friendId{File.friendId}, direction{File.direction}
+FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
+    : lastUpdate(QDateTime::currentDateTime()),
+      lastBytesSent(0),
+      fileNum(status.filenumber),
+      friendId(status.friendnumber),
+      direction(status.direction)
 {
     pic=new QLabel(), filename=new QLabel(), size=new QLabel(), speed=new QLabel(), eta=new QLabel();
     topright = new QPushButton(), bottomright = new QPushButton();
@@ -51,9 +54,9 @@ FileTransfertWidget::FileTransfertWidget(ToxFile File)
 
     pic->setMaximumHeight(40);
     pic->setContentsMargins(5,0,0,0);
-    filename->setText(File.fileName);
+    filename->setText(status.file);
     filename->setFont(prettysmall);
-    size->setText(getHumanReadableSize(File.filesize));
+    size->setText(getHumanReadableSize(status.totalSize));
     size->setFont(prettysmall);
     speed->setText("0B/s");
     speed->setFont(prettysmall);
@@ -74,20 +77,20 @@ FileTransfertWidget::FileTransfertWidget(ToxFile File)
     acceptFileButtonStylesheet = Style::get(":/ui/acceptFileButton/style.css");
 
     topright->setStyleSheet(stopFileButtonStylesheet);
-    if (File.direction == ToxFile::SENDING)
+    if (status.direction == ToxFileTransferInfo::Sending)
     {
         bottomright->setStyleSheet(pauseFileButtonStylesheet);
         connect(topright, SIGNAL(clicked()), this, SLOT(cancelTransfer()));
         connect(bottomright, SIGNAL(clicked()), this, SLOT(pauseResumeSend()));
 
         QPixmap preview;
-        File.file->seek(0);
-        if (preview.loadFromData(File.file->readAll()))
-        {
-            preview = preview.scaledToHeight(40);
-            pic->setPixmap(preview);
-        }
-        File.file->seek(0);
+//        File.file->seek(0);
+//        if (preview.loadFromData(File.file->readAll()))
+//        {
+//            preview = preview.scaledToHeight(40);
+//            pic->setPixmap(preview);
+//        }
+//        File.file->seek(0);
     }
     else
     {
@@ -147,15 +150,16 @@ QString FileTransfertWidget::getHumanReadableSize(int size)
     return QString().setNum(size / pow(1024, exp),'g',3).append(suffix[exp]);
 }
 
-void FileTransfertWidget::onFileTransferInfo(int FriendId, int FileNum, int64_t Filesize, int64_t BytesSent, ToxFile::FileDirection Direction)
+void FileTransfertWidget::onFileTransferInfo(int FriendId, int FileNum, ToxFileTransferInfo status)
 {
-    if (FileNum != fileNum || FriendId != friendId || Direction != direction)
+    if (FileNum != fileNum || FriendId != friendId || status.direction != direction)
             return;
+
     QDateTime newtime = QDateTime::currentDateTime();
     int timediff = lastUpdate.secsTo(newtime);
     if (timediff <= 0)
         return;
-    qint64 diff = BytesSent - lastBytesSent;
+    qint64 diff = status.transmittedBytes - lastBytesSent;
     if (diff < 0)
     {
         qWarning() << "FileTransfertWidget::onFileTransferInfo: Negative transfer speed !";
@@ -163,25 +167,25 @@ void FileTransfertWidget::onFileTransferInfo(int FriendId, int FileNum, int64_t 
     }
     int rawspeed = diff / timediff;
     speed->setText(getHumanReadableSize(rawspeed)+"/s");
-    size->setText(getHumanReadableSize(Filesize));
+    size->setText(getHumanReadableSize(status.totalSize));
     if (!rawspeed)
         return;
-    int etaSecs = (Filesize - BytesSent) / rawspeed;
+    int etaSecs = (status.totalSize - status.transmittedBytes) / rawspeed;
     QTime etaTime(0,0);
     etaTime = etaTime.addSecs(etaSecs);
     eta->setText(etaTime.toString("mm:ss"));
-    if (!Filesize)
+    if (!status.totalSize)
         progress->setValue(0);
     else
-        progress->setValue(BytesSent*100/Filesize);
-    qDebug() << QString("FT: received %1/%2 bytes, progress is %3%").arg(BytesSent).arg(Filesize).arg(BytesSent*100/Filesize);
+        progress->setValue(status.transmittedBytes*100/status.totalSize);
+    qDebug() << QString("FT: received %1/%2 bytes, progress is %3%").arg(status.transmittedBytes).arg(status.totalSize).arg(status.transmittedBytes*100/status.totalSize);
     lastUpdate = newtime;
-    lastBytesSent = BytesSent;
+    lastBytesSent = status.transmittedBytes;
 }
 
-void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, ToxFile::FileDirection Direction)
+void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status)
 {
-    if (FileNum != fileNum || FriendId != friendId || Direction != direction)
+    if (FileNum != fileNum || FriendId != friendId || status.direction != direction)
             return;
     buttonLayout->setContentsMargins(0,0,0,0);
     disconnect(topright);
@@ -203,9 +207,9 @@ void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, Tox
     this->show();
 }
 
-void FileTransfertWidget::onFileTransferFinished(ToxFile File)
+void FileTransfertWidget::onFileTransferFinished(ToxFileTransferInfo File)
 {
-    if (File.fileNum != fileNum || File.friendId != friendId || File.direction != direction)
+    if (File.filenumber != fileNum || File.friendnumber != friendId || File.direction != direction)
             return;
     topright->disconnect();
     disconnect(Widget::getInstance()->getCore(),0,this,0);
@@ -226,19 +230,19 @@ void FileTransfertWidget::onFileTransferFinished(ToxFile File)
     this->hide();
     this->show();
 
-    if (File.direction == ToxFile::RECEIVING)
+    if (File.direction == ToxFileTransferInfo::Receiving)
     {
         QPixmap preview;
-        QFile previewFile(File.filePath);
-        if (previewFile.open(QIODevice::ReadOnly) && previewFile.size() <= 1024*1024*25) // Don't preview big (>25MiB) images
-        {
-            if (preview.loadFromData(previewFile.readAll()))
-            {
-                preview = preview.scaledToHeight(40);
-                pic->setPixmap(preview);
-            }
-            previewFile.close();
-        }
+//        QFile previewFile(File.filePath);
+//        if (previewFile.open(QIODevice::ReadOnly) && previewFile.size() <= 1024*1024*25) // Don't preview big (>25MiB) images
+//        {
+//            if (preview.loadFromData(previewFile.readAll()))
+//            {
+//                preview = preview.scaledToHeight(40);
+//                pic->setPixmap(preview);
+//            }
+//            previewFile.close();
+//        }
     }
 }
 
@@ -250,7 +254,7 @@ void FileTransfertWidget::cancelTransfer()
 void FileTransfertWidget::rejectRecvRequest()
 {
     //Widget::getInstance()->getCore()->rejectFileRecvRequest(friendId, fileNum);
-    onFileTransferCancelled(friendId, fileNum, direction);
+    //onFileTransferCancelled(friendId, fileNum, direction);
 }
 
 // for whatever the fuck reason, QFileInfo::isWritable() always fails for files that don't exist

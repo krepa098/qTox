@@ -118,8 +118,9 @@ ChatForm::ChatForm(Friend* chatFriend)
     //    msgEdit->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     //    chatArea->setAttribute(Qt::WA_LayoutUsesWidgetRect);
 
-    //connect(Widget::getInstance()->getCore(), &Core::fileSendStarted, this, &ChatForm::startFileSend);
+    connect(Widget::getInstance()->getCore(), &Core::fileTransferRequested, this, &ChatForm::startFileSend);
     //connect(Widget::getInstance()->getCore(), &Core::videoFrameReceived, netcam, &NetCamView::updateDisplay);
+
     connect(sendButton, &QPushButton::clicked, this, &ChatForm::onSendTriggered);
     connect(fileButton, &QPushButton::clicked, this, &ChatForm::onAttachClicked);
     connect(callButton, &QPushButton::clicked, this, &ChatForm::onCallTriggered);
@@ -232,18 +233,11 @@ void ChatForm::addMessage(QLabel* author, QLabel* message, QLabel* date)
 
 void ChatForm::onAttachClicked()
 {
-    QString path = QFileDialog::getOpenFileName(0,tr("Send a file"));
-    if (path.isEmpty())
+    QString filename = QFileDialog::getOpenFileName(0,tr("Send a file"));
+    if (filename.isEmpty())
         return;
 
-    QFile file(path);
-    if (!file.exists() || !file.open(QIODevice::ReadOnly))
-        return;
-    long long filesize = file.size();
-    file.close();
-    QFileInfo fi(path);
-
-    emit sendFile(f->friendId, fi.fileName(), path, filesize);
+    emit sendFile(f->friendId, filename);
 }
 
 void ChatForm::onSliderRangeChanged()
@@ -253,10 +247,11 @@ void ChatForm::onSliderRangeChanged()
         scroll->setValue(scroll->maximum());
 }
 
-void ChatForm::startFileSend(ToxFile file)
+void ChatForm::startFileSend(ToxFileTransferInfo trans)
 {
-    if (file.friendId != f->friendId)
+    if (trans.friendnumber != f->friendId)
         return;
+
     QLabel *author = new QLabel(Widget::getInstance()->getUsername());
     QLabel *date = new QLabel(QTime::currentTime().toString("hh:mm"));
     QScrollBar* scroll = chatArea->verticalScrollBar();
@@ -276,7 +271,7 @@ void ChatForm::startFileSend(ToxFile file)
         }
         mainChatLayout->addWidget(author, curRow, 0);
     }
-    FileTransfertWidget* fileTrans = new FileTransfertWidget(file);
+    FileTransfertWidget* fileTrans = new FileTransfertWidget(trans);
     previousName = author->text();
     mainChatLayout->addWidget(fileTrans, curRow, 1);
     mainChatLayout->addWidget(date, curRow, 3);
@@ -289,10 +284,11 @@ void ChatForm::startFileSend(ToxFile file)
     //connect(Widget::getInstance()->getCore(), &Core::fileTransferFinished, fileTrans, &FileTransfertWidget::onFileTransferFinished);
 }
 
-void ChatForm::onFileRecvRequest(ToxFile file)
+void ChatForm::onFileRecvRequest(ToxFileTransferInfo info)
 {
-    if (file.friendId != f->friendId)
-        return;
+//    if (file.friendId != f->friendId)
+//        return;
+
     QLabel *author = new QLabel(f->getName());
     QLabel *date = new QLabel(QTime::currentTime().toString("hh:mm"));
     QScrollBar* scroll = chatArea->verticalScrollBar();
@@ -309,7 +305,7 @@ void ChatForm::onFileRecvRequest(ToxFile file)
         }
         mainChatLayout->addWidget(author, curRow, 0);
     }
-    FileTransfertWidget* fileTrans = new FileTransfertWidget(file);
+    FileTransfertWidget* fileTrans = new FileTransfertWidget(info);
     previousName = author->text();
     mainChatLayout->addWidget(fileTrans, curRow, 1);
     mainChatLayout->addWidget(date, curRow, 3);
@@ -317,9 +313,9 @@ void ChatForm::onFileRecvRequest(ToxFile file)
     mainChatLayout->setRowStretch(curRow, 0);
     curRow++;
 
-    //connect(Widget::getInstance()->getCore(), &Core::fileTransferInfo, fileTrans, &FileTransfertWidget::onFileTransferInfo);
-    //connect(Widget::getInstance()->getCore(), &Core::fileTransferCancelled, fileTrans, &FileTransfertWidget::onFileTransferCancelled);
-    //connect(Widget::getInstance()->getCore(), &Core::fileTransferFinished, fileTrans, &FileTransfertWidget::onFileTransferFinished);
+//    connect(Widget::getInstance()->getCore(), &Core::fileTransferInfo, fileTrans, &FileTransfertWidget::onFileTransferInfo);
+//    connect(Widget::getInstance()->getCore(), &Core::fileTransferCancelled, fileTrans, &FileTransfertWidget::onFileTransferCancelled);
+//    connect(Widget::getInstance()->getCore(), &Core::fileTransferFinished, fileTrans, &FileTransfertWidget::onFileTransferFinished);
 }
 
 void ChatForm::onAvInvite(int FriendId, int CallId, bool video)

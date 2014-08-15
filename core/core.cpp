@@ -21,11 +21,12 @@
 #include <QMutexLocker>
 #include <QVector>
 #include <QtEndian>
+#include <QFileInfo>
 
 #include <tox/tox.h>
 
-#define TOXU8(x) reinterpret_cast<uint8_t*>(x)
-#define TOXC(x) reinterpret_cast<char*>(x)
+#define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
+#define CPtr(x) reinterpret_cast<char*>(x)
 
 /* ====================
  * MAPPING
@@ -35,14 +36,16 @@ Status mapStatus(uint8_t toxStatus)
 {
     switch (toxStatus) {
     case TOX_USERSTATUS_NONE:
-        return Online;
+        return Status::Online;
     case TOX_USERSTATUS_AWAY:
-        return Away;
+        return Status::Away;
     case TOX_USERSTATUS_BUSY:
-        return Busy;
+        return Status::Busy;
     case TOX_USERSTATUS_INVALID:
-        return Offline;
+        return Status::Offline;
     }
+
+    return Status::Offline;
 }
 
 /* ====================
@@ -103,9 +106,19 @@ void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, vo
     Q_UNUSED(tox);
 
     Core* core = static_cast<Core*>(userdata);
-    emit core->friendStatusChanged(friendnumber, status == 1 ? Online : Offline);
+    emit core->friendStatusChanged(friendnumber, status == 1 ? Status::Online : Status::Offline);
 
     qDebug() << "Connection status changed " << friendnumber << status;
+}
+
+void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox);
+
+    Core* core = static_cast<Core*>(userdata);
+    if (receive_send == 1 && control_type == TOX_FILECONTROL_ACCEPT) {
+        emit core->fileTransferStarted(core->getFileTransferInfo(filenumber));
+    }
 }
 
 /* ====================
@@ -115,7 +128,7 @@ void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, vo
 Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
     : QObject(nullptr)
     , tox(nullptr)
-    , status(Offline)
+    , status(Status::Offline)
     , ipV6Enabled(enableIPv6)
     , bootstrapServers(dhtServers)
 {
@@ -128,7 +141,12 @@ Core::~Core()
     kill();
 }
 
-int Core::getMaxNameLength()
+void Core::registerMetaTypes()
+{
+    qRegisterMetaType<Status>();
+}
+
+int Core::getNameMaxLength()
 {
     return TOX_MAX_NAME_LENGTH;
 }
@@ -159,21 +177,21 @@ void Core::onTimeout()
     toxDo();
 
     if (isConnected()) {
-        if (status == Offline)
-            changeStatus(Online);
+        if (status == Status::Offline)
+            changeStatus(Status::Online);
     } else {
-        changeStatus(Offline);
+        changeStatus(Status::Offline);
     }
 }
 
-void Core::loadConfig(const QString &filename)
+void Core::loadConfig(const QString& filename)
 {
     QMutexLocker lock(&mutex);
 
     QFile config(filename);
     config.open(QFile::ReadOnly);
     QByteArray configData = config.readAll();
-    if (tox_load(tox, TOXU8(configData.data()), configData.size()) == 0)
+    if (tox_load(tox, U8Ptr(configData.data()), configData.size()) == 0)
         qDebug() << "tox_load: success";
     else
         qWarning() << "tox_load: Unable to load config " << filename;
@@ -184,7 +202,7 @@ void Core::saveConfig(const QString& filename)
     QMutexLocker lock(&mutex);
 
     QByteArray configData(tox_size(tox), 0);
-    tox_save(tox, TOXU8(configData.data()));
+    tox_save(tox, U8Ptr(configData.data()));
 
     QFile config(filename);
     config.open(QFile::WriteOnly | QFile::Truncate);
@@ -210,6 +228,7 @@ void Core::setupCallbacks()
     tox_callback_user_status(tox, callbackUserStatus, this);
     tox_callback_connection_status(tox, callbackConnectionStatus, this);
     tox_callback_name_change(tox, callbackNameChanged, this);
+    tox_callback_file_control(tox, callbackFileControl, this);
 }
 
 void Core::kill()
@@ -235,7 +254,7 @@ void Core::queryFriends()
 
     for (int friendNumber : friendlist) {
         QByteArray nameData(tox_get_name_size(tox, friendNumber), 0);
-        if (tox_get_name(tox, friendNumber, TOXU8(nameData.data())) == nameData.length()) {
+        if (tox_get_name(tox, friendNumber, U8Ptr(nameData.data())) == nameData.length()) {
             qDebug() << "Add friend " << QString::fromUtf8(nameData);
             emit friendAdded(friendNumber, QString::fromUtf8(nameData));
         }
@@ -251,7 +270,7 @@ void Core::bootstrap()
     int ret = tox_bootstrap_from_address(tox, server.address.toLatin1().data(),
                                          ipV6Enabled ? 1 : 0,
                                          qToBigEndian(server.port),
-                                         TOXU8(server.publicKey.data()));
+                                         U8Ptr(server.publicKey.data()));
 
     if (ret == 1)
         qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
@@ -271,7 +290,7 @@ void Core::queryUserId()
     QMutexLocker lock(&mutex);
 
     QByteArray addressData(TOX_FRIEND_ADDRESS_SIZE, 0);
-    tox_get_address(tox, TOXU8(addressData.data()));
+    tox_get_address(tox, U8Ptr(addressData.data()));
 
     emit userIdChanged(addressData.toHex().toUpper());
 }
@@ -281,7 +300,7 @@ void Core::queryUserStatusMessage()
     QMutexLocker lock(&mutex);
 
     QByteArray msgData(tox_get_self_status_message_size(tox), 0);
-    tox_get_self_status_message(tox, TOXU8(msgData.data()), msgData.length());
+    tox_get_self_status_message(tox, U8Ptr(msgData.data()), msgData.length());
 
     emit userStatusMessageChanged(QString::fromUtf8(msgData));
 }
@@ -292,7 +311,7 @@ QString Core::getUsername()
 
     QByteArray nameData(tox_get_self_name_size(tox), 0);
 
-    if (tox_get_self_name(tox, TOXU8(nameData.data())) == nameData.length()) {
+    if (tox_get_self_name(tox, U8Ptr(nameData.data())) == nameData.length()) {
         QString name = QString::fromUtf8(nameData);
         qDebug() << "tox_get_self_name: sucess [" << name << "]";
         return name;
@@ -306,7 +325,7 @@ void Core::setUsername(const QString& username)
 {
     QMutexLocker lock(&mutex);
 
-    if (tox_set_name(tox, TOXU8(username.toUtf8().data()), username.toUtf8().length()) == 0)
+    if (tox_set_name(tox, U8Ptr(username.toUtf8().data()), username.toUtf8().length()) == 0)
         qDebug() << "tox_set_name: success";
     else
         qDebug() << "tox_set_name: failed";
@@ -314,13 +333,36 @@ void Core::setUsername(const QString& username)
     emit usernameChanged(username);
 }
 
+ToxFileTransferInfo Core::getFileTransferInfo(int filenumber)
+{
+    if (fileTransfers.contains(filenumber))
+        fileTransfers.value(filenumber)->getInfo();
+
+    return ToxFileTransferInfo();
+}
+
 void Core::changeStatus(Status newStatus)
 {
-    QMutexLocker lock(&mutex);
-
     if (status != newStatus) {
         status = newStatus;
         emit statusChanged(status);
+    }
+}
+
+void Core::progressFileTransfers()
+{
+    for (int filenumber : fileTransfers.keys()) {
+        ToxFileTransfer::Ptr transf = fileTransfers.value(filenumber);
+        int friendnumber = transf->getInfo().friendnumber;
+
+        if (transf->getInfo().status == ToxFileTransferInfo::InTransit && transf->getInfo().direction == ToxFileTransferInfo::Sending) {
+            int maximumSize = tox_file_data_size(tox, friendnumber);
+            int remainingBytes = tox_file_data_remaining(tox, friendnumber, filenumber, 0 /*send*/);
+            int offset = transf->getInfo().totalSize - remainingBytes;
+
+            QByteArray filedata = transf->read(offset, maximumSize);
+            tox_file_send_data(tox, friendnumber, filenumber, U8Ptr(filedata.data()), filedata.size());
+        }
     }
 }
 
@@ -328,7 +370,7 @@ void Core::acceptFriendRequest(QString clientId)
 {
     QMutexLocker lock(&mutex);
 
-    int friendnumber = tox_add_friend_norequest(tox, TOXU8(QByteArray::fromHex(clientId.toLower().toLatin1()).data()));
+    int friendnumber = tox_add_friend_norequest(tox, U8Ptr(QByteArray::fromHex(clientId.toLower().toLatin1()).data()));
 
     if (friendnumber >= 0)
         emit friendAdded(friendnumber, "connecting...");
@@ -341,8 +383,8 @@ void Core::sendFriendRequest(QString address, QString msg)
     QMutexLocker lock(&mutex);
 
     int friendNumber = tox_add_friend(tox,
-                                      TOXU8(QByteArray::fromHex(address.toLower().toLatin1()).data()),
-                                      TOXU8(msg.toUtf8().data()),
+                                      U8Ptr(QByteArray::fromHex(address.toLower().toLatin1()).data()),
+                                      U8Ptr(msg.toUtf8().data()),
                                       msg.toUtf8().length());
 
     emit friendAdded(friendNumber, "connecting...");
@@ -362,14 +404,38 @@ void Core::sendMessage(int friendnumber, QString msg)
 {
     QMutexLocker lock(&mutex);
 
-    tox_send_message(tox, friendnumber, TOXU8(msg.toUtf8().data()), msg.toUtf8().size());
+    tox_send_message(tox, friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
+}
+
+void Core::sendFile(int friendNumber, QString filename)
+{
+    qDebug() << "Send file " << filename;
+    QFileInfo info(filename);
+
+    if (info.isReadable()) {
+        int filenumber = tox_new_file_sender(tox, friendNumber, info.size(), U8Ptr(info.fileName().toUtf8().data()), info.fileName().toUtf8().size());
+        if (filenumber > 0) {
+            ToxFileTransfer::Ptr trans = ToxFileTransfer::create(friendNumber, filenumber, filename, ToxFileTransferInfo::Sending);
+            emit fileTransferRequested(trans->getInfo());
+            fileTransfers.insert(filenumber, trans);
+            qDebug() << "New file sender " << filenumber;
+        }
+    }
 }
 
 void Core::setUserStatusMessage(QString msg)
 {
     QMutexLocker lock(&mutex);
 
-    tox_set_status_message(tox, TOXU8(msg.toUtf8().data()), msg.toUtf8().size());
+    tox_set_status_message(tox, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
 
     qDebug() << "tox_set_status_message" << msg;
+}
+
+void Core::setUserStatus(Status newStatus)
+{
+    QMutexLocker lock(&mutex);
+
+    tox_set_user_status(tox, uint8_t(newStatus));
+    changeStatus(newStatus);
 }

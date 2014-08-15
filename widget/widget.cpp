@@ -157,22 +157,24 @@ Widget::Widget(QWidget *parent)
     camera = new Camera;
     camview = new SelfCamView(camera);
 
-    qRegisterMetaType<Status>("Status");
-    qRegisterMetaType<vpx_image>("vpx_image");
-    qRegisterMetaType<uint8_t>("uint8_t");
-    qRegisterMetaType<int32_t>("int32_t");
-    qRegisterMetaType<int64_t>("int64_t");
-    qRegisterMetaType<ToxFile>("ToxFile");
-    qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
+//    qRegisterMetaType<Status>("Status");
+//    qRegisterMetaType<vpx_image>("vpx_image");
+//    qRegisterMetaType<uint8_t>("uint8_t");
+//    qRegisterMetaType<int32_t>("int32_t");
+//    qRegisterMetaType<int64_t>("int64_t");
+//    qRegisterMetaType<ToxFile>("ToxFile");
+//    qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
 
     ToxDhtServer server;
     server.address = Settings::getInstance().getDhtServerList().at(0).address;
     server.port = Settings::getInstance().getDhtServerList().at(0).port;
     server.publicKey = Settings::getInstance().getDhtServerList().at(0).userId;
 
+    Core::registerMetaTypes();
+
     coreThread = new QThread();
     core = new Core(Settings::getInstance().getEnableIPv6(), QVector<ToxDhtServer>() << server);
-    core->loadConfig(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
+    core->loadConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
     core->moveToThread(coreThread);
     connect(coreThread, &QThread::finished, core, &Core::deleteLater);
     connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
@@ -202,7 +204,7 @@ Widget::Widget(QWidget *parent)
     //    connect(core, &Core::groupNamelistChanged, this, &Widget::onGroupNamelistChanged);
     //    connect(core, &Core::emptyGroupCreated, this, &Widget::onEmptyGroupCreated);
 
-    connect(this, &Widget::statusSet, core, &Core::changeStatus);
+    connect(this, &Widget::statusSet, core, &Core::setUserStatus);
     connect(this, &Widget::friendRequested, core, &Core::sendFriendRequest);
     connect(this, &Widget::friendRequestAccepted, core, &Core::acceptFriendRequest);
     connect(this, &Widget::statusMessageChanged, core, &Core::setUserStatusMessage);
@@ -221,7 +223,7 @@ Widget::Widget(QWidget *parent)
     connect(setStatusBusy, SIGNAL(triggered()), this, SLOT(setStatusBusy()));
     //connect(&settingsForm.name, SIGNAL(editingFinished()), this, SLOT(onUsernameChanged()));
 
-    connect(&friendForm, SIGNAL(friendRequested(QString,QString)), this, SIGNAL(friendRequested(QString,QString)));
+    //connect(&friendForm, SIGNAL(friendRequested(QString,QString)), this, SIGNAL(friendRequested(QString,QString)));
 
     coreThread->start();
 
@@ -232,7 +234,7 @@ Widget::Widget(QWidget *parent)
 
 Widget::~Widget()
 {
-    core->saveConfig(Settings::getSettingsDirPath() + '/' + CONFIG_FILE_NAME);
+    core->saveConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
     instance = nullptr;
     coreThread->exit();
     coreThread->wait();
@@ -431,6 +433,8 @@ void Widget::addFriend(int friendId, const QString &userId)
     connect(newfriend->widget, &FriendWidget::removeFriend, this, &Widget::removeFriend);
     connect(newfriend->widget, &FriendWidget::copyFriendIdToClipboard, this, &Widget::copyFriendIdToClipboard);
     connect(newfriend->chatForm, &ChatForm::sendMessage, core, &Core::sendMessage);
+
+    connect(newfriend->chatForm, &ChatForm::sendFile, core, &Core::sendFile);
 
 //    connect(newfriend->chatForm, SIGNAL(sendFile(int32_t, QString, QString, long long)), core, SLOT(sendFile(int32_t, QString, QString, long long)));
 //    connect(newfriend->chatForm, SIGNAL(answerCall(int)), core, SLOT(answerCall(int)));
@@ -1140,17 +1144,17 @@ void Widget::minimizeBtnClicked()
 
 void Widget::setStatusOnline()
 {
-    //core->setStatus(Status::Online);
+    core->setUserStatus(Status::Online);
 }
 
 void Widget::setStatusAway()
 {
-    //core->setStatus(Status::Away);
+    core->setUserStatus(Status::Away);
 }
 
 void Widget::setStatusBusy()
 {
-    //core->setStatus(Status::Busy);
+    core->setUserStatus(Status::Busy);
 }
 
 bool Widget::eventFilter(QObject *, QEvent *event)

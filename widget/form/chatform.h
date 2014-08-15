@@ -52,7 +52,7 @@ public:
 
 signals:
     void sendMessage(int, QString);
-    void sendFile(int32_t friendId, QString, QString, long long);
+    void sendFile(int friendId, QString file);
     void startCall(int friendId);
     void startVideoCall(int friendId, bool video);
     void answerCall(int callId);
@@ -60,8 +60,8 @@ signals:
     void cancelCall(int callId, int friendId);
 
 public slots:
-    void startFileSend(ToxFile file);
-    void onFileRecvRequest(ToxFile file);
+    void startFileSend(ToxFileTransferInfo trans);
+    void onFileRecvRequest(ToxFileTransferInfo info);
     void onAvInvite(int FriendId, int CallId, bool video);
     void onAvStart(int FriendId, int CallId, bool video);
     void onAvCancel(int FriendId, int CallId);

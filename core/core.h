@@ -23,34 +23,23 @@
 #include <QTimer>
 #include <QMutex>
 #include <QVector>
+#include <QMap>
 
-#define CONFIG_FILE_NAME "data"
+#include "io.h"
+
+#define TOX_CONFIG_FILE_NAME "data"
 
 struct Tox;
 
-struct ToxFile
-{
-    enum FileDirection {
-        SENDING,
-        RECEIVING
-    };
-
-    int friendId;
-    int fileNum;
-    QString fileName;
-    QString filePath;
-    int filesize;
-    QFile* file;
-    FileDirection direction;
-};
-
-enum Status : int
+enum class Status : int
 {
     Online = 0,
     Away,
     Busy,
     Offline
 };
+
+Q_DECLARE_METATYPE(Status)
 
 struct ToxDhtServer
 {
@@ -66,35 +55,52 @@ public:
     explicit Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers);
     ~Core();
 
-    static int getMaxNameLength();
+    static void registerMetaTypes();
+    static int getNameMaxLength();
 
     QString getUsername();
     void setUsername(const QString& username);
 
+    ToxFileTransferInfo getFileTransferInfo(int filenumber);
+
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
 signals:
+    // user
     void userIdChanged(QString userId);
     void usernameChanged(QString username);
     void userStatusMessageChanged(QString msg);
-    void friendAdded(int friendId, QString username);
     void statusChanged(Status status);
+
+    // friends
+    void friendAdded(int friendId, QString username);
     void friendStatusChanged(int friendId, Status status);
     void friendStatusMessageChanged(int friendId, QString msg);
     void friendUsernameChanged(int friendId, QString newName);
     void friendRequestReceived(QString publicKey, QString msg);
     void friendMessageReceived(int friendnumber, QString msg);
 
+    // IO
+    void fileTransferRequested(ToxFileTransferInfo status);
+    void fileTransferStarted(ToxFileTransferInfo status);
+    void fileTransferFeedback(ToxFileTransferInfo status);
+
 public slots:
     void start();
     void deleteLater();
 
+    // user
+    void setUserStatusMessage(QString msg);
+    void setUserStatus(Status newStatus);
+
+    // friends
     void acceptFriendRequest(QString clientId);
     void sendFriendRequest(QString address, QString msg);
     void removeFriend(int friendnumber);
     void sendMessage(int friendnumber, QString msg);
-    void setUserStatusMessage(QString msg);
-    void changeStatus(Status newStatus);
+
+    // IO
+    void sendFile(int friendNumber, QString filename);
 
 private slots:
     void onTimeout();
@@ -111,6 +117,8 @@ protected:
     void queryUserId();
     void queryUserStatusMessage();
 
+    void changeStatus(Status newStatus);
+    void progressFileTransfers();
 
 private:
     Tox* tox;
@@ -121,7 +129,7 @@ private:
     Status status;
     bool ipV6Enabled;
     QVector<ToxDhtServer> bootstrapServers;
-
+    QMap<int, ToxFileTransfer::Ptr> fileTransfers;
 };
 
 #endif // CORE_H
