@@ -1,6 +1,7 @@
 #include "io.h"
 
 #include <QFile>
+#include <QDebug>
 
 ToxFileTransfer::Ptr ToxFileTransfer::create(int friendNbr, int fileNbr, QString filename, ToxFileTransferInfo::Direction dir)
 {
@@ -20,6 +21,16 @@ ToxFileTransfer::ToxFileTransfer(int friendNbr, int fileNbr, QString filename, T
     }
 }
 
+ToxFileTransfer::~ToxFileTransfer()
+{
+    qDebug() << "DEL TRANSFER";
+}
+
+void ToxFileTransfer::setFileTransferStatus(ToxFileTransferInfo::Status status)
+{
+    info.status = status;
+}
+
 ToxFileTransferInfo ToxFileTransfer::getInfo()
 {
     return info;
@@ -33,5 +44,14 @@ bool ToxFileTransfer::isValid() const
 QByteArray ToxFileTransfer::read(qint64 offset, qint64 maxLen)
 {
     file.seek(offset);
-    return file.read(maxLen);
+    QByteArray data = file.read(maxLen);
+    info.transmittedBytes += data.size();
+
+    return data;
+}
+
+void ToxFileTransfer::write(const QByteArray &data)
+{
+    info.transmittedBytes += data.size();
+    file.write(data);
 }

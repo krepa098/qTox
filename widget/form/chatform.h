@@ -60,8 +60,8 @@ signals:
     void cancelCall(int callId, int friendId);
 
 public slots:
-    void startFileSend(ToxFileTransferInfo trans);
-    void onFileRecvRequest(ToxFileTransferInfo info);
+    void addNewFileTransfer(ToxFileTransferInfo trans);
+    void onFileTransferRequest(ToxFileTransferInfo info);
     void onAvInvite(int FriendId, int CallId, bool video);
     void onAvStart(int FriendId, int CallId, bool video);
     void onAvCancel(int FriendId, int CallId);

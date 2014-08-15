@@ -7,12 +7,10 @@
 struct ToxFileTransferInfo
 {
     enum Status {
-        Finished,
-        Canceled,
-        NotYetStarted,
         Paused,
-        Invalid,
-        InTransit,
+        Transit,
+        Canceled,
+        Finished,
     };
 
     enum Direction {
@@ -22,7 +20,7 @@ struct ToxFileTransferInfo
     };
 
     ToxFileTransferInfo()
-        : status(Invalid),
+        : status(Paused),
           totalSize(0),
           transmittedBytes(0),
           direction(None),
@@ -31,7 +29,7 @@ struct ToxFileTransferInfo
     {}
 
     ToxFileTransferInfo(int friendNbr, int fileNbr, QString filename, qint64 size, Direction dir)
-        : status(NotYetStarted),
+        : status(Paused),
           totalSize(size),
           transmittedBytes(0),
           direction(dir),
@@ -49,18 +47,25 @@ struct ToxFileTransferInfo
     int friendnumber;
 };
 
+Q_DECLARE_METATYPE(ToxFileTransferInfo)
+
 class ToxFileTransfer
 {
 public:
     using Ptr = QSharedPointer<ToxFileTransfer>;
 
     static Ptr create(int friendNbr, int fileNbr, QString filename, ToxFileTransferInfo::Direction dir);
+
     ToxFileTransfer(int friendNbr, int fileNbr, QString filename, ToxFileTransferInfo::Direction dir);
+    ~ToxFileTransfer();
+
+    void setFileTransferStatus(ToxFileTransferInfo::Status status);
 
     ToxFileTransferInfo getInfo();
     int getFriendnumber() const;
     bool isValid() const;
     QByteArray read(qint64 offset, qint64 maxLen);
+    void write(const QByteArray& data);
 
 private:
     QFile file;

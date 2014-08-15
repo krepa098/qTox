@@ -118,7 +118,7 @@ ChatForm::ChatForm(Friend* chatFriend)
     //    msgEdit->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     //    chatArea->setAttribute(Qt::WA_LayoutUsesWidgetRect);
 
-    connect(Widget::getInstance()->getCore(), &Core::fileTransferRequested, this, &ChatForm::startFileSend);
+    connect(Widget::getInstance()->getCore(), &Core::fileTransferRequested, this, &ChatForm::addNewFileTransfer);
     //connect(Widget::getInstance()->getCore(), &Core::videoFrameReceived, netcam, &NetCamView::updateDisplay);
 
     connect(sendButton, &QPushButton::clicked, this, &ChatForm::onSendTriggered);
@@ -247,7 +247,7 @@ void ChatForm::onSliderRangeChanged()
         scroll->setValue(scroll->maximum());
 }
 
-void ChatForm::startFileSend(ToxFileTransferInfo trans)
+void ChatForm::addNewFileTransfer(ToxFileTransferInfo trans)
 {
     if (trans.friendnumber != f->friendId)
         return;
@@ -284,10 +284,10 @@ void ChatForm::startFileSend(ToxFileTransferInfo trans)
     //connect(Widget::getInstance()->getCore(), &Core::fileTransferFinished, fileTrans, &FileTransfertWidget::onFileTransferFinished);
 }
 
-void ChatForm::onFileRecvRequest(ToxFileTransferInfo info)
+void ChatForm::onFileTransferRequest(ToxFileTransferInfo info)
 {
-//    if (file.friendId != f->friendId)
-//        return;
+    if (info.friendnumber != f->friendId)
+        return;
 
     QLabel *author = new QLabel(f->getName());
     QLabel *date = new QLabel(QTime::currentTime().toString("hh:mm"));

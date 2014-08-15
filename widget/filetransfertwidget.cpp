@@ -139,6 +139,8 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo status)
     buttonLayout->addWidget(bottomright);
     buttonLayout->setContentsMargins(2,0,0,0);
     buttonLayout->setSpacing(0);
+
+    connect(Widget::getInstance()->getCore(), &Core::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
 }
 
 QString FileTransfertWidget::getHumanReadableSize(int size)
@@ -147,19 +149,37 @@ QString FileTransfertWidget::getHumanReadableSize(int size)
     int exp = 0;
     if (size)
         exp = std::min( (int) (log(size) / log(1024)), (int) (sizeof(suffix) / sizeof(suffix[0]) - 1));
-    return QString().setNum(size / pow(1024, exp),'g',3).append(suffix[exp]);
+    return QString().setNum(size / pow(1024, exp),'f',3).append(suffix[exp]);
 }
 
-void FileTransfertWidget::onFileTransferInfo(int FriendId, int FileNum, ToxFileTransferInfo status)
+void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo info)
 {
-    if (FileNum != fileNum || FriendId != friendId || status.direction != direction)
+    if (info.filenumber != fileNum)
             return;
+
+    QPalette pal;
+    switch(info.status)
+    {
+    case ToxFileTransferInfo::Finished:
+        break;
+    case ToxFileTransferInfo::Canceled:
+        pal.setColor(QPalette::Window, QColor(0,255,0));
+        setPalette(pal);
+        break;
+    case ToxFileTransferInfo::Paused:
+        pal.setColor(QPalette::Window, QColor(255,255,0));
+        setPalette(pal);
+        break;
+    }
+
+    this->hide();
+    this->show();
 
     QDateTime newtime = QDateTime::currentDateTime();
     int timediff = lastUpdate.secsTo(newtime);
     if (timediff <= 0)
         return;
-    qint64 diff = status.transmittedBytes - lastBytesSent;
+    qint64 diff = info.transmittedBytes - lastBytesSent;
     if (diff < 0)
     {
         qWarning() << "FileTransfertWidget::onFileTransferInfo: Negative transfer speed !";
@@ -167,20 +187,20 @@ void FileTransfertWidget::onFileTransferInfo(int FriendId, int FileNum, ToxFileT
     }
     int rawspeed = diff / timediff;
     speed->setText(getHumanReadableSize(rawspeed)+"/s");
-    size->setText(getHumanReadableSize(status.totalSize));
+    size->setText(getHumanReadableSize(info.totalSize));
     if (!rawspeed)
         return;
-    int etaSecs = (status.totalSize - status.transmittedBytes) / rawspeed;
+    int etaSecs = (info.totalSize - info.transmittedBytes) / rawspeed;
     QTime etaTime(0,0);
     etaTime = etaTime.addSecs(etaSecs);
     eta->setText(etaTime.toString("mm:ss"));
-    if (!status.totalSize)
+    if (!info.totalSize)
         progress->setValue(0);
     else
-        progress->setValue(status.transmittedBytes*100/status.totalSize);
-    qDebug() << QString("FT: received %1/%2 bytes, progress is %3%").arg(status.transmittedBytes).arg(status.totalSize).arg(status.transmittedBytes*100/status.totalSize);
+        progress->setValue(info.transmittedBytes*100/info.totalSize);
+    qDebug() << QString("FT: received %1/%2 bytes, progress is %3%").arg(info.transmittedBytes).arg(info.totalSize).arg(info.transmittedBytes*100/info.totalSize);
     lastUpdate = newtime;
-    lastBytesSent = status.transmittedBytes;
+    lastBytesSent = info.transmittedBytes;
 }
 
 void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status)
@@ -203,8 +223,7 @@ void FileTransfertWidget::onFileTransferCancelled(int FriendId, int FileNum, Tox
     this->style()->polish(this);
 
     //Toggle window visibility to fix draw order bug
-    this->hide();
-    this->show();
+
 }
 
 void FileTransfertWidget::onFileTransferFinished(ToxFileTransferInfo File)

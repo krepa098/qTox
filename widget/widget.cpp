@@ -436,6 +436,8 @@ void Widget::addFriend(int friendId, const QString &userId)
 
     connect(newfriend->chatForm, &ChatForm::sendFile, core, &Core::sendFile);
 
+    //connect(core, &Core::fileTransferRequested, newfriend->chatForm, &ChatForm::onFileTransferRequest);
+
 //    connect(newfriend->chatForm, SIGNAL(sendFile(int32_t, QString, QString, long long)), core, SLOT(sendFile(int32_t, QString, QString, long long)));
 //    connect(newfriend->chatForm, SIGNAL(answerCall(int)), core, SLOT(answerCall(int)));
 //    connect(newfriend->chatForm, SIGNAL(hangupCall(int)), core, SLOT(hangupCall(int)));

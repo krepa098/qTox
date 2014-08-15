@@ -61,10 +61,9 @@ public:
     QString getUsername();
     void setUsername(const QString& username);
 
-    ToxFileTransferInfo getFileTransferInfo(int filenumber);
-
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
+
 signals:
     // user
     void userIdChanged(QString userId);
@@ -82,7 +81,6 @@ signals:
 
     // IO
     void fileTransferRequested(ToxFileTransferInfo status);
-    void fileTransferStarted(ToxFileTransferInfo status);
     void fileTransferFeedback(ToxFileTransferInfo status);
 
 public slots:
@@ -119,6 +117,18 @@ protected:
 
     void changeStatus(Status newStatus);
     void progressFileTransfers();
+
+private:
+    //callbacks -- userdata is always a pointer to an instance of Core
+    static void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata);
+    static void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata);
+    static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
+    static void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata);
+    static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
+    static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
+    static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata);
+    static void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata);
+    static void callbackFileData(Tox *tox, int32_t friendnumber, uint8_t filenumber, const uint8_t *data, uint16_t length, void *userdata);
 
 private:
     Tox* tox;

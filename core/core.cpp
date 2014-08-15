@@ -26,7 +26,7 @@
 #include <tox/tox.h>
 
 #define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
-#define CPtr(x) reinterpret_cast<char*>(x)
+#define CPtr(x) reinterpret_cast<const char*>(x)
 
 /* ====================
  * MAPPING
@@ -51,18 +51,18 @@ Status mapStatus(uint8_t toxStatus)
 /* ====================
  * CALLBACKS
  * ====================*/
-void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata)
+void Core::callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     QString name = QString::fromUtf8(reinterpret_cast<const char*>(newname), length);
     emit core->friendUsernameChanged(friendnumber, name);
 }
 
-void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata)
+void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     QByteArray pubkey(reinterpret_cast<const char*>(public_key), TOX_CLIENT_ID_SIZE);
@@ -70,40 +70,40 @@ void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* d
     emit core->friendRequestReceived(pubkey.toHex().toUpper(), msg);
 }
 
-void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata)
+void Core::callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     QString msg = QString::fromUtf8(reinterpret_cast<const char*>(message), length);
     emit core->friendMessageReceived(friendnumber, msg);
 }
 
-void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata)
+void Core::callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 }
 
-void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata)
+void Core::callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     QString msg = QString::fromUtf8(reinterpret_cast<const char*>(newstatus), length);
     emit core->friendStatusMessageChanged(friendnumber, msg);
 }
 
-void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata)
+void Core::callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     emit core->friendStatusChanged(friendnumber, mapStatus(TOX_USERSTATUS));
 }
 
-void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata)
+void Core::callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
     emit core->friendStatusChanged(friendnumber, status == 1 ? Status::Online : Status::Offline);
@@ -111,16 +111,64 @@ void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, vo
     qDebug() << "Connection status changed " << friendnumber << status;
 }
 
-void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata)
+void Core::callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata)
 {
-    Q_UNUSED(tox);
+    Q_UNUSED(tox)
 
+    qDebug() << "FILECTRL" << control_type << ":" << receive_send;
     Core* core = static_cast<Core*>(userdata);
-    if (receive_send == 1 && control_type == TOX_FILECONTROL_ACCEPT) {
-        emit core->fileTransferStarted(core->getFileTransferInfo(filenumber));
+
+    ToxFileTransfer::Ptr transf = core->fileTransfers.value(filenumber);
+    if (transf.isNull())
+        return;
+
+    // we are sending
+    if (receive_send == 1) {
+        switch (control_type) {
+        case TOX_FILECONTROL_ACCEPT:
+            // and the recipient accepted (or unpaused) the file -> start transfer
+            transf->setFileTransferStatus(ToxFileTransferInfo::Transit);
+            break;
+        case TOX_FILECONTROL_PAUSE:
+            // and the recipient paused the filetransfer
+            transf->setFileTransferStatus(ToxFileTransferInfo::Paused);
+            break;
+        case TOX_FILECONTROL_KILL:
+            // and the recipient canceled the filetransfer
+            transf->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+            break;
+        }
     }
+
+    // we are receiving the file...
+    if (receive_send == 0) {
+        switch (control_type) {
+        case TOX_FILECONTROL_PAUSE:
+            // and the sender paused the filetransfer
+            transf->setFileTransferStatus(ToxFileTransferInfo::Paused);
+            break;
+        case TOX_FILECONTROL_KILL:
+            // and sender stopped the filetransfer
+            transf->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+            break;
+        }
+    }
+
+    emit core->fileTransferFeedback(transf->getInfo());
 }
 
+void Core::callbackFileData(Tox* tox, int32_t friendnumber, uint8_t filenumber, const uint8_t* data, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+
+    ToxFileTransfer::Ptr transf = core->fileTransfers.value(filenumber);
+    if (!transf.isNull()) {
+        QByteArray recData(CPtr(data), length);
+        transf->write(recData);
+    }
+}
 /* ====================
  * CORE
  * ====================*/
@@ -144,6 +192,7 @@ Core::~Core()
 void Core::registerMetaTypes()
 {
     qRegisterMetaType<Status>();
+    qRegisterMetaType<ToxFileTransferInfo>();
 }
 
 int Core::getNameMaxLength()
@@ -175,6 +224,7 @@ void Core::deleteLater()
 void Core::onTimeout()
 {
     toxDo();
+    progressFileTransfers();
 
     if (isConnected()) {
         if (status == Status::Offline)
@@ -229,6 +279,7 @@ void Core::setupCallbacks()
     tox_callback_connection_status(tox, callbackConnectionStatus, this);
     tox_callback_name_change(tox, callbackNameChanged, this);
     tox_callback_file_control(tox, callbackFileControl, this);
+    tox_callback_file_data(tox, callbackFileData, this);
 }
 
 void Core::kill()
@@ -333,14 +384,6 @@ void Core::setUsername(const QString& username)
     emit usernameChanged(username);
 }
 
-ToxFileTransferInfo Core::getFileTransferInfo(int filenumber)
-{
-    if (fileTransfers.contains(filenumber))
-        fileTransfers.value(filenumber)->getInfo();
-
-    return ToxFileTransferInfo();
-}
-
 void Core::changeStatus(Status newStatus)
 {
     if (status != newStatus) {
@@ -351,18 +394,39 @@ void Core::changeStatus(Status newStatus)
 
 void Core::progressFileTransfers()
 {
-    for (int filenumber : fileTransfers.keys()) {
-        ToxFileTransfer::Ptr transf = fileTransfers.value(filenumber);
-        int friendnumber = transf->getInfo().friendnumber;
+    QMutexLocker lock(&mutex);
 
-        if (transf->getInfo().status == ToxFileTransferInfo::InTransit && transf->getInfo().direction == ToxFileTransferInfo::Sending) {
+    for (int filenumber : fileTransfers.keys()) {
+        ToxFileTransfer::Ptr transfer = fileTransfers.value(filenumber);
+        int friendnumber = transfer->getInfo().friendnumber;
+
+        // send new data to the recipient
+        if (transfer->getInfo().status == ToxFileTransferInfo::Transit && transfer->getInfo().direction == ToxFileTransferInfo::Sending) {
             int maximumSize = tox_file_data_size(tox, friendnumber);
             int remainingBytes = tox_file_data_remaining(tox, friendnumber, filenumber, 0 /*send*/);
-            int offset = transf->getInfo().totalSize - remainingBytes;
+            int offset = transfer->getInfo().totalSize - remainingBytes;
 
-            QByteArray filedata = transf->read(offset, maximumSize);
-            tox_file_send_data(tox, friendnumber, filenumber, U8Ptr(filedata.data()), filedata.size());
+            if (remainingBytes > 0) {
+                // send data
+                QByteArray filedata = transfer->read(offset, maximumSize);
+                if (tox_file_send_data(tox, friendnumber, filenumber, U8Ptr(filedata.data()), filedata.size()) == -1) {
+                    // error (recipient went offline)
+                    transfer->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+                }
+            } else {
+                // file transmission finished
+                transfer->setFileTransferStatus(ToxFileTransferInfo::Finished);
+                tox_file_send_control(tox, friendnumber, 0, filenumber, TOX_FILECONTROL_FINISHED, nullptr, 0);
+            }
         }
+
+        // drop finished and canceled file transfers
+        if (transfer->getInfo().status == ToxFileTransferInfo::Finished || transfer->getInfo().status == ToxFileTransferInfo::Canceled) {
+            fileTransfers.remove(transfer->getInfo().filenumber);
+        }
+
+        // report progress
+        emit fileTransferFeedback(transfer->getInfo());
     }
 }
 
@@ -409,12 +473,14 @@ void Core::sendMessage(int friendnumber, QString msg)
 
 void Core::sendFile(int friendNumber, QString filename)
 {
+    QMutexLocker lock(&mutex);
+
     qDebug() << "Send file " << filename;
     QFileInfo info(filename);
 
     if (info.isReadable()) {
         int filenumber = tox_new_file_sender(tox, friendNumber, info.size(), U8Ptr(info.fileName().toUtf8().data()), info.fileName().toUtf8().size());
-        if (filenumber > 0) {
+        if (filenumber >= 0) {
             ToxFileTransfer::Ptr trans = ToxFileTransfer::create(friendNumber, filenumber, filename, ToxFileTransferInfo::Sending);
             emit fileTransferRequested(trans->getInfo());
             fileTransfers.insert(filenumber, trans);

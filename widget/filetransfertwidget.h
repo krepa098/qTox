@@ -37,7 +37,7 @@ public:
     FileTransfertWidget(ToxFileTransferInfo status);
 
 public slots:
-    void onFileTransferInfo(int FriendId, int FileNum, ToxFileTransferInfo status);
+    void onFileTransferInfo(ToxFileTransferInfo info);
     void onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status);
     void onFileTransferFinished(ToxFileTransferInfo File);
 
