@@ -1,23 +1,32 @@
 #include "io.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QDebug>
 
-ToxFileTransfer::Ptr ToxFileTransfer::create(int friendNbr, int fileNbr, QString filename, ToxFileTransferInfo::Direction dir)
+ToxFileTransfer::Ptr ToxFileTransfer::createSending(int friendNbr, int fileNbr, QString filename)
 {
-    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, dir));
+    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, -1, ToxFileTransferInfo::Sending));
 }
 
-ToxFileTransfer::ToxFileTransfer(int friendNbr, int fileNbr, QString filename, ToxFileTransferInfo::Direction dir)
+ToxFileTransfer::Ptr ToxFileTransfer::createReceiving(int friendNbr, int fileNbr, QString filename, qint64 totalSize)
+{
+    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, totalSize, ToxFileTransferInfo::Receiving));
+}
+
+ToxFileTransfer::ToxFileTransfer(int friendNbr, int fileNbr, QString filename, qint64 totalSize, ToxFileTransferInfo::Direction dir)
     : valid(false)
 {
-    file.setFileName(filename);
+    if (dir == ToxFileTransferInfo::Sending) {
+        file.setFileName(filename);
 
-    if (file.open(dir == ToxFileTransferInfo::Sending ? QFile::ReadOnly : QFile::WriteOnly | QFile::Truncate))
-    {
-        valid = true;
+        if (file.open(QFile::ReadOnly)) {
+            valid = true;
 
-        info = ToxFileTransferInfo(friendNbr, fileNbr, file.fileName(), file.size(), dir);
+            info = ToxFileTransferInfo(friendNbr, fileNbr, QFileInfo(filename).fileName(),  QFileInfo(filename).absoluteFilePath(), file.size(), dir);
+        }
+    } else {
+        info = ToxFileTransferInfo(friendNbr, fileNbr, filename, QString(), totalSize, dir);
     }
 }
 
@@ -26,9 +35,19 @@ ToxFileTransfer::~ToxFileTransfer()
     qDebug() << "DEL TRANSFER";
 }
 
-void ToxFileTransfer::setFileTransferStatus(ToxFileTransferInfo::Status status)
+void ToxFileTransfer::setStatus(ToxFileTransferInfo::Status status)
 {
     info.status = status;
+}
+
+void ToxFileTransfer::setDestination(const QString &filePath)
+{
+    if (info.direction == ToxFileTransferInfo::Receiving)
+    {
+        info.fileName = filePath;
+        file.setFileName(filePath);
+        valid = file.open(QFile::WriteOnly | QFile::Truncate);
+    }
 }
 
 ToxFileTransferInfo ToxFileTransfer::getInfo()
@@ -50,7 +69,12 @@ QByteArray ToxFileTransfer::read(qint64 offset, qint64 maxLen)
     return data;
 }
 
-void ToxFileTransfer::write(const QByteArray &data)
+void ToxFileTransfer::unread(qint64 len)
+{
+    info.transmittedBytes -= len;
+}
+
+void ToxFileTransfer::write(const QByteArray& data)
 {
     info.transmittedBytes += data.size();
     file.write(data);

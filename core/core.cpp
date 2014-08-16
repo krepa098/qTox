@@ -115,7 +115,7 @@ void Core::callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_s
 {
     Q_UNUSED(tox)
 
-    qDebug() << "FILECTRL" << control_type << ":" << receive_send;
+    qDebug() << "FILECTRL" << receive_send << ":" << control_type;
     Core* core = static_cast<Core*>(userdata);
 
     ToxFileTransfer::Ptr transf = core->fileTransfers.value(filenumber);
@@ -127,15 +127,15 @@ void Core::callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_s
         switch (control_type) {
         case TOX_FILECONTROL_ACCEPT:
             // and the recipient accepted (or unpaused) the file -> start transfer
-            transf->setFileTransferStatus(ToxFileTransferInfo::Transit);
+            transf->setStatus(ToxFileTransferInfo::Transit);
             break;
         case TOX_FILECONTROL_PAUSE:
             // and the recipient paused the filetransfer
-            transf->setFileTransferStatus(ToxFileTransferInfo::Paused);
+            transf->setStatus(ToxFileTransferInfo::PausedByReceiver);
             break;
         case TOX_FILECONTROL_KILL:
             // and the recipient canceled the filetransfer
-            transf->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+            transf->setStatus(ToxFileTransferInfo::Canceled);
             break;
         }
     }
@@ -143,13 +143,20 @@ void Core::callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_s
     // we are receiving the file...
     if (receive_send == 0) {
         switch (control_type) {
+        case TOX_FILECONTROL_ACCEPT:
+            transf->setStatus(ToxFileTransferInfo::Transit);
+            break;
         case TOX_FILECONTROL_PAUSE:
             // and the sender paused the filetransfer
-            transf->setFileTransferStatus(ToxFileTransferInfo::Paused);
+            transf->setStatus(ToxFileTransferInfo::PausedBySender);
             break;
         case TOX_FILECONTROL_KILL:
             // and sender stopped the filetransfer
-            transf->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+            transf->setStatus(ToxFileTransferInfo::Canceled);
+            break;
+        case TOX_FILECONTROL_FINISHED:
+            // and sender has sent everything
+            transf->setStatus(ToxFileTransferInfo::Finished);
             break;
         }
     }
@@ -170,18 +177,17 @@ void Core::callbackFileData(Tox* tox, int32_t friendnumber, uint8_t filenumber, 
     }
 }
 
-void Core::callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata)
+void Core::callbackFileSendRequest(Tox* tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t* filename, uint16_t filename_length, void* userdata)
 {
     Q_UNUSED(tox)
 
-    QByteArray filenameData(CPtr(filename), filename_length);
-    ToxFileTransfer::Ptr trans = ToxFileTransfer::create(friendnumber, filenumber, QString::fromUtf8(filenameData), ToxFileTransferInfo::Receiving);
+    Core* core = static_cast<Core*>(userdata);
 
-    if (trans->isValid())
-    {
-        fileTransfers.insert(filenumber, trans);
-        emit fileTransferRequested(trans->getInfo());
-    }
+    QByteArray filenameData(CPtr(filename), filename_length);
+    ToxFileTransfer::Ptr trans = ToxFileTransfer::createReceiving(friendnumber, filenumber, QString::fromUtf8(filenameData), filesize);
+
+    core->fileTransfers.insert(filenumber, trans);
+    emit core->fileTransferRequested(trans->getInfo());
 }
 
 /* ====================
@@ -191,7 +197,7 @@ void Core::callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filen
 Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
     : QObject(nullptr)
     , tox(nullptr)
-    , status(Status::Offline)
+    , info(Status::Offline)
     , ipV6Enabled(enableIPv6)
     , bootstrapServers(dhtServers)
 {
@@ -218,11 +224,10 @@ int Core::getNameMaxLength()
 void Core::start()
 {
     qDebug() << "Core: start";
+    connect(&ticker, &QTimer::timeout, this, &Core::onTimeout, Qt::DirectConnection);
 
-    ticker.setInterval(1000 / 20); // 20 times per second;
     ticker.setSingleShot(false);
-    connect(&ticker, &QTimer::timeout, this, &Core::onTimeout);
-    ticker.start();
+    ticker.start(10);
 
     bootstrap();
     emit usernameChanged(getUsername());
@@ -238,11 +243,13 @@ void Core::deleteLater()
 
 void Core::onTimeout()
 {
+    ticker.setInterval(qMax(1, int(tox_do_interval(tox))));
+
     toxDo();
     progressFileTransfers();
 
     if (isConnected()) {
-        if (status == Status::Offline)
+        if (info == Status::Offline)
             changeStatus(Status::Online);
     } else {
         changeStatus(Status::Offline);
@@ -402,9 +409,9 @@ void Core::setUsername(const QString& username)
 
 void Core::changeStatus(Status newStatus)
 {
-    if (status != newStatus) {
-        status = newStatus;
-        emit statusChanged(status);
+    if (info != newStatus) {
+        info = newStatus;
+        emit statusChanged(info);
     }
 }
 
@@ -418,6 +425,7 @@ void Core::progressFileTransfers()
 
         // send new data to the recipient
         if (transfer->getInfo().status == ToxFileTransferInfo::Transit && transfer->getInfo().direction == ToxFileTransferInfo::Sending) {
+
             int maximumSize = tox_file_data_size(tox, friendnumber);
             int remainingBytes = tox_file_data_remaining(tox, friendnumber, filenumber, 0 /*send*/);
             int offset = transfer->getInfo().totalSize - remainingBytes;
@@ -426,18 +434,22 @@ void Core::progressFileTransfers()
                 // send data
                 QByteArray filedata = transfer->read(offset, maximumSize);
                 if (tox_file_send_data(tox, friendnumber, filenumber, U8Ptr(filedata.data()), filedata.size()) == -1) {
+                    transfer->unread(filedata.size());
                     // error (recipient went offline)
-                    transfer->setFileTransferStatus(ToxFileTransferInfo::Canceled);
+                    qDebug() << "TRANS ERROR!";
+                    //transfer->setStatus(ToxFileTransferInfo::Canceled);
                 }
             } else {
+                qDebug() << "TRANS FINISHED";
                 // file transmission finished
-                transfer->setFileTransferStatus(ToxFileTransferInfo::Finished);
+                transfer->setStatus(ToxFileTransferInfo::Finished);
                 tox_file_send_control(tox, friendnumber, 0, filenumber, TOX_FILECONTROL_FINISHED, nullptr, 0);
             }
         }
 
         // drop finished and canceled file transfers
         if (transfer->getInfo().status == ToxFileTransferInfo::Finished || transfer->getInfo().status == ToxFileTransferInfo::Canceled) {
+            qDebug() << "drop transfer status:" << transfer->getInfo().status;
             fileTransfers.remove(transfer->getInfo().filenumber);
         }
 
@@ -487,20 +499,87 @@ void Core::sendMessage(int friendnumber, QString msg)
     tox_send_message(tox, friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
 }
 
-void Core::sendFile(int friendNumber, QString filename)
+void Core::sendFile(int friendNumber, QString filePath)
 {
     QMutexLocker lock(&mutex);
 
-    qDebug() << "Send file " << filename;
-    QFileInfo info(filename);
+    qDebug() << "Send file " << filePath;
+    QFileInfo info(filePath);
 
     if (info.isReadable()) {
         int filenumber = tox_new_file_sender(tox, friendNumber, info.size(), U8Ptr(info.fileName().toUtf8().data()), info.fileName().toUtf8().size());
         if (filenumber >= 0) {
-            ToxFileTransfer::Ptr trans = ToxFileTransfer::create(friendNumber, filenumber, filename, ToxFileTransferInfo::Sending);
+            ToxFileTransfer::Ptr trans = ToxFileTransfer::createSending(friendNumber, filenumber, filePath);
             emit fileTransferRequested(trans->getInfo());
             fileTransfers.insert(filenumber, trans);
             qDebug() << "New file sender " << filenumber;
+        }
+    }
+}
+
+void Core::acceptFile(ToxFileTransferInfo info, QString filePath)
+{
+    QMutexLocker lock(&mutex);
+
+    ToxFileTransfer::Ptr transfer = fileTransfers.value(info.filenumber);
+
+    if (!transfer.isNull()) {
+        transfer->setDestination(filePath);
+        if (transfer->isValid())
+        {
+            tox_file_send_control(tox, info.friendnumber, 1, info.filenumber, TOX_FILECONTROL_ACCEPT, nullptr, 0); // accept
+            transfer->setStatus(ToxFileTransferInfo::Transit);
+        }
+        else
+        {
+            tox_file_send_control(tox, info.friendnumber, 1, info.filenumber, TOX_FILECONTROL_KILL, nullptr, 0); // invalid location -> kill
+        }
+    }
+}
+
+void Core::killFile(ToxFileTransferInfo info)
+{
+    QMutexLocker lock(&mutex);
+
+    ToxFileTransfer::Ptr transfer = fileTransfers.value(info.filenumber);
+
+    if (!transfer.isNull()) {
+        int sendReceive = transfer->getInfo().direction == ToxFileTransferInfo::Sending ? 0 : 1;
+        tox_file_send_control(tox, info.friendnumber, sendReceive, info.filenumber, TOX_FILECONTROL_KILL, nullptr, 0);
+        transfer->setStatus(ToxFileTransferInfo::Canceled);
+    }
+}
+
+void Core::pauseFile(ToxFileTransferInfo info)
+{
+    QMutexLocker lock(&mutex);
+
+    ToxFileTransfer::Ptr transfer = fileTransfers.value(info.filenumber);
+
+    if (!transfer.isNull()) {
+        if (info.status == ToxFileTransferInfo::Transit)
+        {
+            int sendReceive = transfer->getInfo().direction == ToxFileTransferInfo::Sending ? 0 : 1;
+            tox_file_send_control(tox, info.friendnumber, sendReceive, info.filenumber, TOX_FILECONTROL_PAUSE, nullptr, 0);
+            transfer->setStatus(ToxFileTransferInfo::Paused);
+            qDebug() << "TOX pause" << sendReceive;
+        }
+    }
+}
+
+void Core::resumeFile(ToxFileTransferInfo info)
+{
+    QMutexLocker lock(&mutex);
+
+    ToxFileTransfer::Ptr transfer = fileTransfers.value(info.filenumber);
+
+    if (!transfer.isNull()) {
+        if (info.status == ToxFileTransferInfo::Paused)
+        {
+            int sendReceive = info.direction == ToxFileTransferInfo::Sending ? 0 : 1;
+            tox_file_send_control(tox, info.friendnumber, sendReceive, info.filenumber, TOX_FILECONTROL_ACCEPT, nullptr, 0);
+            transfer->setStatus(ToxFileTransferInfo::Transit);
+            qDebug() << "TOX resume" << sendReceive;
         }
     }
 }

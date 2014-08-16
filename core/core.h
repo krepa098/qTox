@@ -72,16 +72,16 @@ signals:
     void statusChanged(Status status);
 
     // friends
-    void friendAdded(int friendId, QString username);
-    void friendStatusChanged(int friendId, Status status);
-    void friendStatusMessageChanged(int friendId, QString msg);
-    void friendUsernameChanged(int friendId, QString newName);
+    void friendAdded(int friendnumber, QString username);
+    void friendStatusChanged(int friendnumber, Status status);
+    void friendStatusMessageChanged(int friendnumber, QString msg);
+    void friendUsernameChanged(int friendnumber, QString newName);
     void friendRequestReceived(QString publicKey, QString msg);
     void friendMessageReceived(int friendnumber, QString msg);
 
     // IO
-    void fileTransferRequested(ToxFileTransferInfo status);
-    void fileTransferFeedback(ToxFileTransferInfo status);
+    void fileTransferRequested(ToxFileTransferInfo info);
+    void fileTransferFeedback(ToxFileTransferInfo info);
 
 public slots:
     void start();
@@ -98,7 +98,11 @@ public slots:
     void sendMessage(int friendnumber, QString msg);
 
     // IO
-    void sendFile(int friendNumber, QString filename);
+    void sendFile(int friendNumber, QString filePath);
+    void acceptFile(ToxFileTransferInfo info, QString filePath);
+    void killFile(ToxFileTransferInfo info);
+    void pauseFile(ToxFileTransferInfo info);
+    void resumeFile(ToxFileTransferInfo info);
 
 private slots:
     void onTimeout();
@@ -126,7 +130,7 @@ private:
     static void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata);
     static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
     static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
-    static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata);
+    static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t info, void* userdata);
     static void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata);
     static void callbackFileData(Tox *tox, int32_t friendnumber, uint8_t filenumber, const uint8_t *data, uint16_t length, void *userdata);
     static void callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata);
@@ -137,7 +141,7 @@ private:
     QMutex mutex;
     QTimer ticker;
 
-    Status status;
+    Status info;
     bool ipV6Enabled;
     QVector<ToxDhtServer> bootstrapServers;
     QMap<int, ToxFileTransfer::Ptr> fileTransfers;

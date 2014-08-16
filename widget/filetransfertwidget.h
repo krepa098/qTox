@@ -34,19 +34,15 @@ class FileTransfertWidget : public QWidget
     Q_OBJECT
 
 public:
-    FileTransfertWidget(ToxFileTransferInfo status);
+    FileTransfertWidget(ToxFileTransferInfo Info);
 
 public slots:
-    void onFileTransferInfo(ToxFileTransferInfo info);
-    void onFileTransferCancelled(int FriendId, int FileNum, ToxFileTransferInfo status);
-    void onFileTransferFinished(ToxFileTransferInfo File);
+    void onFileTransferInfo(ToxFileTransferInfo currInfo);
 
 private slots:
     void cancelTransfer();
-    void rejectRecvRequest();
     void acceptRecvRequest();
-    void pauseResumeRecv();
-    void pauseResumeSend();
+    void pauseResume();
 
 private:
     QString getHumanReadableSize(int size);
@@ -61,10 +57,8 @@ private:
     QWidget* buttonWidget;
     QDateTime lastUpdate;
     long long lastBytesSent;
-    int fileNum;
-    int friendId;
+    ToxFileTransferInfo info;
     QString savePath;
-    ToxFileTransferInfo::Direction direction;
     QString stopFileButtonStylesheet, pauseFileButtonStylesheet, acceptFileButtonStylesheet;
     void paintEvent(QPaintEvent *);
 };
