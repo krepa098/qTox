@@ -46,7 +46,8 @@ private slots:
 
 private:
     QString getHumanReadableSize(int size);
-    void hideControlsAndDisconnect();
+    void onEndOfTransmission();
+    void paintEvent(QPaintEvent *);
 
 private:
     QLabel *pic, *filename, *size, *speed, *eta;
@@ -60,7 +61,6 @@ private:
     ToxFileTransferInfo info;
     QString savePath;
     QString stopFileButtonStylesheet, pauseFileButtonStylesheet, acceptFileButtonStylesheet;
-    void paintEvent(QPaintEvent *);
 };
 
 #endif // FILETRANSFERTWIDGET_H

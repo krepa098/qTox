@@ -99,7 +99,7 @@ public slots:
 
     // IO
     void sendFile(int friendNumber, QString filePath);
-    void acceptFile(ToxFileTransferInfo info, QString filePath);
+    void acceptFile(ToxFileTransferInfo info, QString path);
     void killFile(ToxFileTransferInfo info);
     void pauseFile(ToxFileTransferInfo info);
     void resumeFile(ToxFileTransferInfo info);

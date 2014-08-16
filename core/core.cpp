@@ -517,14 +517,14 @@ void Core::sendFile(int friendNumber, QString filePath)
     }
 }
 
-void Core::acceptFile(ToxFileTransferInfo info, QString filePath)
+void Core::acceptFile(ToxFileTransferInfo info, QString path)
 {
     QMutexLocker lock(&mutex);
 
     ToxFileTransfer::Ptr transfer = fileTransfers.value(info.filenumber);
 
     if (!transfer.isNull()) {
-        transfer->setDestination(filePath);
+        transfer->setDestination(path);
         if (transfer->isValid())
         {
             tox_file_send_control(tox, info.friendnumber, 1, info.filenumber, TOX_FILECONTROL_ACCEPT, nullptr, 0); // accept

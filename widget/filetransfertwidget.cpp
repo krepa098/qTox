@@ -76,14 +76,12 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo Info)
         connect(topright, SIGNAL(clicked()), this, SLOT(cancelTransfer()));
         connect(bottomright, SIGNAL(clicked()), this, SLOT(pauseResume()));
 
-        QPixmap preview;
-        //        File.file->seek(0);
-        //        if (preview.loadFromData(File.file->readAll()))
-        //        {
-        //            preview = preview.scaledToHeight(40);
-        //            pic->setPixmap(preview);
-        //        }
-        //        File.file->seek(0);
+        QImage preview;
+        if (preview.load(info.filePath))
+        {
+            preview = preview.scaledToHeight(40, Qt::SmoothTransformation);
+            pic->setPixmap(QPixmap::fromImage(preview));
+        }
     } else {
         bottomright->setStyleSheet(acceptFileButtonStylesheet);
         connect(topright, SIGNAL(clicked()), this, SLOT(cancelTransfer()));
@@ -143,9 +141,8 @@ QString FileTransfertWidget::getHumanReadableSize(int size)
     return QString().setNum(size / pow(1024, exp), 'f', 2).append(suffix[exp]);
 }
 
-void FileTransfertWidget::hideControlsAndDisconnect()
+void FileTransfertWidget::onEndOfTransmission()
 {
-    //disconnect();
     disconnect(Widget::getInstance()->getCore(), &Core::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
 
     progress->hide();
@@ -154,6 +151,13 @@ void FileTransfertWidget::hideControlsAndDisconnect()
     topright->hide();
     bottomright->hide();
     buttonLayout->setContentsMargins(0, 0, 0, 0);
+
+    QImage preview;
+    if (info.status == ToxFileTransferInfo::Finished && preview.load(info.filePath))
+    {
+        preview = preview.scaledToHeight(40, Qt::SmoothTransformation);
+        pic->setPixmap(QPixmap::fromImage(preview));
+    }
 }
 
 void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo currInfo)
@@ -166,11 +170,11 @@ void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo currInfo)
     switch (currInfo.status) {
     case ToxFileTransferInfo::Finished:
         setObjectName("success");
-        hideControlsAndDisconnect();
+        onEndOfTransmission();
         break;
     case ToxFileTransferInfo::Canceled:
         setObjectName("error");
-        hideControlsAndDisconnect();
+        onEndOfTransmission();
         break;
     case ToxFileTransferInfo::Paused:
     case ToxFileTransferInfo::PausedBySender:
@@ -214,53 +218,17 @@ void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo currInfo)
     lastBytesSent = currInfo.transmittedBytes;
 }
 
-//void FileTransfertWidget::onFileTransferFinished(ToxFileTransferInfo File)
-//{
-//    if (File.filenumber != fileNum || File.friendnumber != friendId || File.direction != direction)
-//        return;
-//    topright->disconnect();
-//    disconnect(Widget::getInstance()->getCore(),0,this,0);
-
-//    if (File.direction == ToxFileTransferInfo::Receiving)
-//    {
-//        QPixmap preview;
-//        //        QFile previewFile(File.filePath);
-//        //        if (previewFile.open(QIODevice::ReadOnly) && previewFile.size() <= 1024*1024*25) // Don't preview big (>25MiB) images
-//        //        {
-//        //            if (preview.loadFromData(previewFile.readAll()))
-//        //            {
-//        //                preview = preview.scaledToHeight(40);
-//        //                pic->setPixmap(preview);
-//        //            }
-//        //            previewFile.close();
-//        //        }
-//    }
-//}
-
 void FileTransfertWidget::cancelTransfer()
 {
     Widget::getInstance()->getCore()->killFile(info);
 }
 
-// for whatever the fuck reason, QFileInfo::isWritable() always fails for files that don't exist
-// which makes it useless for our case
-// since QDir doesn't have an isWritable(), the only option I can think of is to make/delete the file
-// surely this is a common problem that has a qt-implemented solution?
-bool isWritable(QString& path)
-{
-    QFile file(path);
-    bool exists = file.exists();
-    bool out = file.open(QIODevice::WriteOnly);
-    file.close();
-    if (!exists)
-        file.remove();
-    return out;
-}
-
 void FileTransfertWidget::acceptRecvRequest()
 {
-    QString path = QFileDialog::getSaveFileName(nullptr, tr("Save a file", "Title of the file saving dialog"), QDir::currentPath() + '/' + info.fileName);
-    if (!path.isEmpty() && isWritable(path)) {
+    QString path = QFileDialog::getExistingDirectory(nullptr, tr("Save a file", "Title of the file saving dialog"), QDir::currentPath());
+    QFileInfo dirInfo(path);
+
+    if (!path.isEmpty() && dirInfo.isDir() && dirInfo.isWritable()) {
         Widget::getInstance()->getCore()->acceptFile(info, path);
 
         bottomright->setStyleSheet(pauseFileButtonStylesheet);

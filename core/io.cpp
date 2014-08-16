@@ -1,3 +1,19 @@
+/*
+    Copyright (C) 2014 by Project Tox <https://tox.im>
+
+    This file is part of qTox, a Qt-based graphical interface for Tox.
+
+    This program is libre software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+    See the COPYING file for more details.
+*/
+
 #include "io.h"
 
 #include <QFile>
@@ -40,12 +56,12 @@ void ToxFileTransfer::setStatus(ToxFileTransferInfo::Status status)
     info.status = status;
 }
 
-void ToxFileTransfer::setDestination(const QString &filePath)
+void ToxFileTransfer::setDestination(const QString &path)
 {
     if (info.direction == ToxFileTransferInfo::Receiving)
     {
-        info.fileName = filePath;
-        file.setFileName(filePath);
+        info.filePath = path + '/' + info.fileName;
+        file.setFileName(info.filePath);
         valid = file.open(QFile::WriteOnly | QFile::Truncate);
     }
 }
@@ -78,4 +94,5 @@ void ToxFileTransfer::write(const QByteArray& data)
 {
     info.transmittedBytes += data.size();
     file.write(data);
+    file.flush();
 }
