@@ -76,8 +76,6 @@ HEADERS  += widget/form/addfriendform.h \
     grouplist.h \
     settings.h \
     friendlist.h \
-    cdata.h \
-    cstring.h \
     audiobuffer.h \
     widget/selfcamview.h \
     widget/videosurface.h \
@@ -114,8 +112,6 @@ SOURCES += \
     grouplist.cpp \
     main.cpp \
     settings.cpp \
-    cdata.cpp \
-    cstring.cpp \
     audiobuffer.cpp \
     widget/selfcamview.cpp \
     widget/videosurface.cpp \
