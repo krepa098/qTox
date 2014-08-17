@@ -46,14 +46,16 @@ void CoreMessagingModule::sendMessage(int friendnumber, QString msg)
     tox_send_message(tox(), friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
 }
 
-void CoreMessagingModule::acceptGroupInvite(int friendnumber, QString groupPubKey)
+void CoreMessagingModule::acceptGroupInvite(int friendnumber, QByteArray groupPubKey)
 {
     QMutexLocker lock(coreMutex());
 
-    int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.toLower().toLatin1().data()));
+    int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.data()));
+
     if (groupnumber >= 0)
     {
-        emit groupJoined(groupnumber);
+        emit groupJoined(groupnumber, groupPubKey);
+        emit groupPeerJoined(groupnumber, 0, ""); // workaround: tox_join_groupchat calls callbackGroundNamelistChanged(tox, groupNb, 0, "")
     }
 }
 
@@ -106,7 +108,7 @@ void CoreMessagingModule::callbackGroupInvite(Tox *tox, int friendnumber, const 
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
     QByteArray pubkey(CPtr(group_public_key), TOX_CLIENT_ID_SIZE);
-    emit module->groupInviteReceived(friendnumber, pubkey.toHex().toUpper());
+    emit module->groupInviteReceived(friendnumber, pubkey);
 
     Q_UNUSED(tox)
 }

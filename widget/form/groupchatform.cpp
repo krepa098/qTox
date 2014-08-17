@@ -29,7 +29,9 @@
 #include <QFileDialog>
 
 GroupChatForm::GroupChatForm(Group* chatGroup)
-    : group(chatGroup), curRow{0}, lockSliderToBottom{true}
+    : group(chatGroup)
+    , curRow{ 0 }
+    , lockSliderToBottom{ true }
 {
     main = new QWidget(), head = new QWidget(), chatAreaWidget = new QWidget();
     headLayout = new QHBoxLayout(), mainFootLayout = new QHBoxLayout();
@@ -49,8 +51,8 @@ GroupChatForm::GroupChatForm(Group* chatGroup)
     //nusers->setText(GroupChatForm::tr("%1 users in chat","Number of users in chat").arg(group->peers.size()));
     avatar->setPixmap(QPixmap(":/img/group.png"));
     QString names;
-//    for (QString& s : group->peers)
-//        names.append(s+", ");
+    //    for (QString& s : group->peers)
+    //        names.append(s+", ");
     names.chop(2);
     namesList->setText(names);
     namesList->setFont(small);
@@ -63,7 +65,7 @@ GroupChatForm::GroupChatForm(Group* chatGroup)
     chatArea->setContextMenuPolicy(Qt::CustomContextMenu);
     chatArea->setFrameStyle(QFrame::NoFrame);
 
-    mainChatLayout->setColumnStretch(1,1);
+    mainChatLayout->setColumnStretch(1, 1);
     mainChatLayout->setSpacing(10);
 
     msgEdit->setObjectName("group");
@@ -71,7 +73,7 @@ GroupChatForm::GroupChatForm(Group* chatGroup)
     msgEdit->setFixedHeight(50);
     msgEdit->setFrameStyle(QFrame::NoFrame);
 
-    mainChatLayout->setColumnStretch(1,1);
+    mainChatLayout->setColumnStretch(1, 1);
     mainChatLayout->setHorizontalSpacing(10);
 
     sendButton->setStyleSheet(Style::get(":/ui/sendButton/sendButton.css"));
@@ -105,7 +107,7 @@ GroupChatForm::GroupChatForm(Group* chatGroup)
 
     connect(sendButton, SIGNAL(clicked()), this, SLOT(onSendTriggered()));
     connect(msgEdit, SIGNAL(enterPressed()), this, SLOT(onSendTriggered()));
-    connect(chatArea->verticalScrollBar(), SIGNAL(rangeChanged(int,int)), this, SLOT(onSliderRangeChanged()));
+    connect(chatArea->verticalScrollBar(), SIGNAL(rangeChanged(int, int)), this, SLOT(onSliderRangeChanged()));
     connect(chatArea, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onChatContextMenuRequested(QPoint)));
 }
 
@@ -115,7 +117,7 @@ GroupChatForm::~GroupChatForm()
     delete main;
 }
 
-void GroupChatForm::show(Ui::MainWindow &ui)
+void GroupChatForm::show(Ui::MainWindow& ui)
 {
     ui.mainContent->layout()->addWidget(main);
     ui.mainHead->layout()->addWidget(head);
@@ -139,14 +141,9 @@ void GroupChatForm::onSendTriggered()
 
 void GroupChatForm::addGroupMessage(QString message, int peerId)
 {
-    QLabel *msgAuthor;
-//    if (group->peers.contains(peerId))
-//        msgAuthor = new QLabel(group->peers[peerId]);
-//    else
-//        msgAuthor = new QLabel(tr("<Unknown>"));
-
-    QLabel *msgText = new QLabel(message);
-    QLabel *msgDate = new QLabel(QTime::currentTime().toString("hh:mm"));
+    QLabel* msgAuthor = new QLabel(group->peerName(peerId));
+    QLabel* msgText = new QLabel(message);
+    QLabel* msgDate = new QLabel(QTime::currentTime().toString("hh:mm"));
 
     addMessage(msgAuthor, msgText, msgDate);
 }
@@ -159,7 +156,7 @@ void GroupChatForm::addMessage(QString author, QString message, QString date)
 void GroupChatForm::addMessage(QLabel* author, QLabel* message, QLabel* date)
 {
     QPalette greentext;
-    greentext.setColor(QPalette::WindowText, QColor(61,204,61));
+    greentext.setColor(QPalette::WindowText, QColor(61, 204, 61));
     QScrollBar* scroll = chatArea->verticalScrollBar();
     lockSliderToBottom = scroll && scroll->value() == scroll->maximum();
     author->setAlignment(Qt::AlignTop | Qt::AlignLeft);
@@ -168,31 +165,27 @@ void GroupChatForm::addMessage(QLabel* author, QLabel* message, QLabel* date)
     message->setTextInteractionFlags(Qt::TextBrowserInteraction);
     author->setTextInteractionFlags(Qt::TextBrowserInteraction);
     date->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    if (author->text() == Widget::getInstance()->getUsername())
-    {
+    if (author->text() == Widget::getInstance()->getUsername()) {
         QPalette pal;
         pal.setColor(QPalette::WindowText, Qt::gray);
         author->setPalette(pal);
         message->setPalette(pal);
     }
-    if (previousName.isEmpty() || previousName != author->text())
-    {
-        if (curRow)
-        {
+    if (previousName.isEmpty() || previousName != author->text()) {
+        if (curRow) {
             mainChatLayout->setRowStretch(curRow, 0);
-            mainChatLayout->addItem(new QSpacerItem(0,AUTHOR_CHANGE_SPACING),curRow,0,1,3);
+            mainChatLayout->addItem(new QSpacerItem(0, AUTHOR_CHANGE_SPACING), curRow, 0, 1, 3);
         }
         previousName = author->text();
         curRow++;
-    }
-    else if (curRow)// onSaveLogClicked expects 0 or 3 QLabel per line
+    } else if (curRow) // onSaveLogClicked expects 0 or 3 QLabel per line
         author->setText("");
     if (message->text()[0] == '>')
         message->setPalette(greentext);
     mainChatLayout->addWidget(author, curRow, 0);
     mainChatLayout->addWidget(message, curRow, 1);
     mainChatLayout->addWidget(date, curRow, 3);
-    mainChatLayout->setRowStretch(curRow+1, 1);
+    mainChatLayout->setRowStretch(curRow + 1, 1);
     mainChatLayout->setRowStretch(curRow, 0);
     curRow++;
     author->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -207,15 +200,15 @@ void GroupChatForm::onSliderRangeChanged()
 {
     QScrollBar* scroll = chatArea->verticalScrollBar();
     if (lockSliderToBottom)
-         scroll->setValue(scroll->maximum());
+        scroll->setValue(scroll->maximum());
 }
 
-void GroupChatForm::onUserListChanged(QMap<int,QString> peers)
+void GroupChatForm::onUserListChanged(QMap<int, QString> peers)
 {
     nusers->setText(tr("%1 users in chat").arg(group->peerCount()));
     QString names;
     for (QString& s : peers)
-        names.append(s+", ");
+        names.append(s + ", ");
     names.chop(2);
     namesList->setText(names);
 }
@@ -231,7 +224,7 @@ void GroupChatForm::onChatContextMenuRequested(QPoint pos)
 
 void GroupChatForm::onSaveLogClicked()
 {
-    QString path = QFileDialog::getSaveFileName(0,tr("Save chat log"));
+    QString path = QFileDialog::getSaveFileName(0, tr("Save chat log"));
     if (path.isEmpty())
         return;
 
@@ -241,17 +234,13 @@ void GroupChatForm::onSaveLogClicked()
 
     QString log;
     QList<QLabel*> labels = chatAreaWidget->findChildren<QLabel*>();
-    int i=0;
-    for (QLabel* label : labels)
-    {
+    int i = 0;
+    for (QLabel* label : labels) {
         log += label->text();
-        if (i==2)
-        {
-            i=0;
+        if (i == 2) {
+            i = 0;
             log += '\n';
-        }
-        else
-        {
+        } else {
             log += '\t';
             i++;
         }

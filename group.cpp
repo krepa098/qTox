@@ -23,8 +23,9 @@
 #include "core/core.h"
 #include <QDebug>
 
-Group::Group(int GroupId, QString Name)
+Group::Group(int GroupId, QString Name, QByteArray publicKey)
     : groupId(GroupId)
+    , pubKey(publicKey)
 {
     widget = new GroupWidget(groupId, Name);
     chatForm = new GroupChatForm(this);
@@ -32,35 +33,12 @@ Group::Group(int GroupId, QString Name)
     //in groupchats, we only notify on messages containing your name
     hasNewMessages = 0;
     userWasMentioned = 0;
-
-    //connect to core
-    connect(Widget::getInstance()->getCore()->msgModule(), &CoreMessagingModule::groupPeerJoined, this, &Group::onPeerJoined);
-    connect(Widget::getInstance()->getCore()->msgModule(), &CoreMessagingModule::groupPeerLeft, this, &Group::onPeerLeft);
-    connect(Widget::getInstance()->getCore()->msgModule(), &CoreMessagingModule::groupPeerNameChanged, this, &Group::onPeerNameChanged);
 }
 
 Group::~Group()
 {
     delete chatForm;
     delete widget;
-}
-
-void Group::onPeerJoined(int groupnumber, int peer, QString name)
-{
-    if (groupId == groupnumber)
-        addPeer(peer, name);
-}
-
-void Group::onPeerNameChanged(int groupnumber, int peer, QString name)
-{
-    if (groupId == groupnumber)
-        updatePeer(peer, name);
-}
-
-void Group::onPeerLeft(int groupnumber, int peer)
-{
-    if (groupId == groupnumber)
-        removePeer(peer);
 }
 
 void Group::addPeer(int peerId, QString name)
@@ -87,7 +65,17 @@ void Group::updatePeer(int peerId, QString name)
     }
 }
 
-int Group::peerCount()
+int Group::peerCount() const
 {
     return peers.size();
+}
+
+QString Group::peerName(int peer) const
+{
+    return peers.value(peer, tr("<unknown>"));
+}
+
+QByteArray Group::getPublicKey() const
+{
+    return pubKey;
 }

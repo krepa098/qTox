@@ -31,24 +31,22 @@ class Group : public QObject
 {
     Q_OBJECT
 public:
-    Group(int GroupId, QString Name);
+    Group(int GroupId, QString Name, QByteArray publicKey);
     ~Group();
     void addPeer(int peerId, QString name);
     void removePeer(int peerId);
     void updatePeer(int peerId, QString newName);
 
-    int peerCount();
-
-private slots:
-    void onPeerJoined(int groupnumber, int peer, QString name);
-    void onPeerNameChanged(int groupnumber, int peer, QString name);
-    void onPeerLeft(int groupnumber, int peer);
+    int peerCount() const;
+    QString peerName(int peer) const;
+    QByteArray getPublicKey() const;
 
 private:
     QMap<int,QString> peers;
 
 public:
     int groupId;
+    QByteArray pubKey;
 
     GroupWidget* widget;
     GroupChatForm* chatForm;

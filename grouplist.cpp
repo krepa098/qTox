@@ -19,9 +19,9 @@
 
 QList<Group*> GroupList::groupList;
 
-Group* GroupList::addGroup(int groupId, QString name)
+Group* GroupList::addGroup(int groupId, QString name, QByteArray publicKey)
 {
-    Group* newGroup = new Group(groupId, name);
+    Group* newGroup = new Group(groupId, name, publicKey);
     groupList.append(newGroup);
     return newGroup;
 }
@@ -44,4 +44,15 @@ void GroupList::removeGroup(int groupId)
             return;
         }
     }
+}
+
+bool GroupList::contains(QByteArray publicKey)
+{
+    for (Group* g : groupList)
+    {
+        if (g->getPublicKey() == publicKey)
+            return true;
+    }
+
+    return false;
 }

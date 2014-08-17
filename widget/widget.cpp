@@ -206,6 +206,10 @@ Widget::Widget(QWidget *parent)
     connect(core->msgModule(), &CoreMessagingModule::groupInviteReceived, this, &Widget::onGroupInviteReceived);
     connect(core->msgModule(), &CoreMessagingModule::groupJoined, this, &Widget::onGroupJoined);
     connect(core->msgModule(), &CoreMessagingModule::groupMessage, this, &Widget::onGroupMessageReceived);
+    // group peers
+    connect(core->msgModule(), &CoreMessagingModule::groupPeerJoined, this, &Widget::onGroupPeerJoined);
+    connect(core->msgModule(), &CoreMessagingModule::groupPeerLeft, this, &Widget::onGroupPeerRemoved);
+    connect(core->msgModule(), &CoreMessagingModule::groupPeerNameChanged, this, &Widget::onGroupPeerNameChanged);
 
     //    connect(core, &Core::groupInviteReceived, this, &Widget::onGroupInviteReceived);
     //    connect(core, &Core::groupMessageReceived, this, &Widget::onGroupMessageReceived);
@@ -625,9 +629,31 @@ void Widget::copyFriendIdToClipboard(int friendId)
     }
 }
 
-void Widget::onGroupInviteReceived(int32_t friendId, QString groupPublicKey)
+void Widget::onGroupInviteReceived(int32_t friendId, QByteArray groupPublicKey)
 {
-    core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
+    if (!GroupList::contains(groupPublicKey))
+        core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
+}
+
+void Widget::onGroupPeerJoined(int groupnumber, int peer, QString name)
+{
+    Group* g = GroupList::findGroup(groupnumber);
+    if (g)
+        g->addPeer(peer, name);
+}
+
+void Widget::onGroupPeerRemoved(int groupnumber, int peer)
+{
+    Group* g = GroupList::findGroup(groupnumber);
+    if (g)
+        g->removePeer(peer);
+}
+
+void Widget::onGroupPeerNameChanged(int groupnumber, int peer, QString name)
+{
+    Group* g = GroupList::findGroup(groupnumber);
+    if (g)
+        g->updatePeer(peer, name);
 }
 
 void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message)
@@ -708,9 +734,9 @@ void Widget::onGroupWidgetClicked(GroupWidget* widget)
     }
 }
 
-void Widget::onGroupJoined(int groupnumber)
+void Widget::onGroupJoined(int groupnumber, QByteArray groupPubKey)
 {
-    createGroup(groupnumber);
+    createGroup(groupnumber, groupPubKey);
 }
 
 void Widget::removeGroup(int groupId)
@@ -731,7 +757,7 @@ Core *Widget::getCore()
     return core;
 }
 
-Group *Widget::createGroup(int groupId)
+Group *Widget::createGroup(int groupId, QByteArray groupPublicKey)
 {
     qDebug() << "Create group" << groupId;
     Group* g = GroupList::findGroup(groupId);
@@ -742,7 +768,7 @@ Group *Widget::createGroup(int groupId)
     }
 
     QString groupName = QString("Groupchat #%1").arg(groupId);
-    Group* newgroup = GroupList::addGroup(groupId, groupName);
+    Group* newgroup = GroupList::addGroup(groupId, groupName, groupPublicKey);
     QWidget* widget = ui->friendList->widget();
     QLayout* layout = widget->layout();
     layout->addWidget(newgroup->widget);
@@ -764,7 +790,7 @@ void Widget::showTestCamview()
 
 void Widget::onEmptyGroupCreated(int groupId)
 {
-    createGroup(groupId);
+    createGroup(groupId, QByteArray());
 }
 
 bool Widget::isFriendWidgetCurActiveWidget(Friend* f)

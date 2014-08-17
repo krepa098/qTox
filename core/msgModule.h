@@ -30,9 +30,9 @@ signals:
     void friendMessageReceived(int friendnumber, QString msg);
 
     // group chats
-    void groupInviteReceived(int friendnumber, QString groupPubKey);
+    void groupInviteReceived(int friendnumber, QByteArray groupPubKey);
     void groupMessage(int groupnumber, int friendgroupnumber, QString msg);
-    void groupJoined(int groupnumber);
+    void groupJoined(int groupnumber, QByteArray groupPubKey);
     void groupCreated(int groupnumber);
     void groupPeerNameChanged(int groupnumber, int peer, QString name);
     void groupPeerJoined(int groupnumber, int peer, QString name);
@@ -42,7 +42,7 @@ public slots:
     void sendMessage(int friendnumber, QString msg);
 
     // group chats
-    void acceptGroupInvite(int friendnumber, QString groupPubKey);
+    void acceptGroupInvite(int friendnumber, QByteArray groupPubKey);
     void sendGroupInvite(int friendnumber, int groupnumber);
     void createGroup();
     void removeGroup(int groupnumber);
@@ -56,7 +56,7 @@ private:
     static void callbackGroundNamelistChanged(Tox *tox, int groupnumber, int peer, uint8_t change, void *userdata);
 
 private:
-
+    bool m_queueUpNamelistChanges();
 };
 
 #endif // MSGMODULE_H
