@@ -14,7 +14,7 @@
     See the COPYING file for more details.
 */
 
-#include "io.h"
+#include "ioModule.h"
 
 #include <QFile>
 #include <QFileInfo>

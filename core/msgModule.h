@@ -14,39 +14,30 @@
     See the COPYING file for more details.
 */
 
-#ifndef MODULE_H
-#define MODULE_H
+#ifndef MSGMODULE_H
+#define MSGMODULE_H
 
-#include <QObject>
-#include <QMutex>
+#include "module.h"
 
-struct Tox;
-
-class CoreModule : public QObject
+class CoreMessagingModule : public CoreModule
 {
     Q_OBJECT
 public:
-    CoreModule(QObject* parent, Tox* tox, QMutex* mutex)
-        : QObject(parent),
-          m_tox(tox),
-          m_coreMutex(mutex)
-    {
-    }
+    CoreMessagingModule(QObject* parent, Tox* tox, QMutex* mutex);
+    void update();
 
-    Tox* tox() {
-        return m_tox;
-    }
+signals:
+    void friendMessageReceived(int friendnumber, QString msg);
 
-    QMutex* coreMutex()
-    {
-        return m_coreMutex;
-    }
-
-    virtual void update() = 0;
+public slots:
+    void sendMessage(int friendnumber, QString msg);
 
 private:
-    Tox* m_tox;
-    QMutex* m_coreMutex;
+    // callbacks -- userdata is always a pointer to an instance of this class
+    static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
+
+private:
+
 };
 
-#endif // MODULE_H
+#endif // MSGMODULE_H

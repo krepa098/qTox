@@ -88,9 +88,9 @@ HEADERS  += widget/form/addfriendform.h \
     widget/adjustingscrollarea.h \
     core/core.h \
     core/av.h \
-    core/io.h \
     core/module.h \
-    core/messaging.h
+    core/msgModule.h \
+    core/ioModule.h
 
 SOURCES += \
     widget/form/addfriendform.cpp \
@@ -126,5 +126,5 @@ SOURCES += \
     widget/adjustingscrollarea.cpp \
     core/core.cpp \
     core/av.cpp \
-    core/io.cpp \
-    core/messaging.cpp
+    core/msgModule.cpp \
+    core/ioModule.cpp

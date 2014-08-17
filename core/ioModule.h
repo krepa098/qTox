@@ -14,8 +14,8 @@
     See the COPYING file for more details.
 */
 
-#ifndef IO_H
-#define IO_H
+#ifndef IOMODULE_H
+#define IOMODULE_H
 
 #include <QSharedPointer>
 #include <QFile>
@@ -149,4 +149,4 @@ private:
     QMap<int, ToxFileTransfer::Ptr> m_fileTransfers;
 };
 
-#endif // IO_H
+#endif // IOMODULE_H

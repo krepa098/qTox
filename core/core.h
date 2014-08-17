@@ -25,8 +25,8 @@
 #include <QVector>
 #include <QMap>
 
-#include "io.h"
-#include "messaging.h"
+#include "ioModule.h"
+#include "msgModule.h"
 
 #define TOX_CONFIG_FILE_NAME "data"
 
