@@ -64,6 +64,8 @@ public:
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
 
+    CoreIOModule* ioModule();
+
 signals:
     // user
     void userIdChanged(QString userId);
@@ -79,10 +81,6 @@ signals:
     void friendRequestReceived(QString publicKey, QString msg);
     void friendMessageReceived(int friendnumber, QString msg);
 
-    // IO
-    void fileTransferRequested(ToxFileTransferInfo info);
-    void fileTransferFeedback(ToxFileTransferInfo info);
-
 public slots:
     void start();
     void deleteLater();
@@ -96,13 +94,6 @@ public slots:
     void sendFriendRequest(QString address, QString msg);
     void removeFriend(int friendnumber);
     void sendMessage(int friendnumber, QString msg);
-
-    // IO
-    void sendFile(int friendNumber, QString filePath);
-    void acceptFile(ToxFileTransferInfo info, QString path);
-    void killFile(ToxFileTransferInfo info);
-    void pauseFile(ToxFileTransferInfo info);
-    void resumeFile(ToxFileTransferInfo info);
 
 private slots:
     void onTimeout();
@@ -123,7 +114,7 @@ protected:
     void progressFileTransfers();
 
 private:
-    //callbacks -- userdata is always a pointer to an instance of Core
+    // callbacks -- userdata is always a pointer to an instance of Core
     static void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata);
     static void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata);
     static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
@@ -131,9 +122,6 @@ private:
     static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
     static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
     static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t info, void* userdata);
-    static void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata);
-    static void callbackFileData(Tox *tox, int32_t friendnumber, uint8_t filenumber, const uint8_t *data, uint16_t length, void *userdata);
-    static void callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata);
 
 private:
     Tox* tox;
@@ -144,7 +132,8 @@ private:
     Status info;
     bool ipV6Enabled;
     QVector<ToxDhtServer> bootstrapServers;
-    QMap<int, ToxFileTransfer::Ptr> fileTransfers;
+
+    CoreIOModule* m_ioModule;
 };
 
 #endif // CORE_H

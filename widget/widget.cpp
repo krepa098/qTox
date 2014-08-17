@@ -434,7 +434,7 @@ void Widget::addFriend(int friendId, const QString &userId)
     connect(newfriend->widget, &FriendWidget::copyFriendIdToClipboard, this, &Widget::copyFriendIdToClipboard);
     connect(newfriend->chatForm, &ChatForm::sendMessage, core, &Core::sendMessage);
 
-    connect(newfriend->chatForm, &ChatForm::sendFile, core, &Core::sendFile);
+    connect(newfriend->chatForm, &ChatForm::sendFile, core->ioModule(), &CoreIOModule::sendFile);
 
     //connect(core, &Core::fileTransferRequested, newfriend->chatForm, &ChatForm::onFileTransferRequest);
 

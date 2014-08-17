@@ -19,6 +19,12 @@
 
 #include <QSharedPointer>
 #include <QFile>
+#include <QMap>
+#include "module.h"
+
+/********************
+ * ToxFileTransferInfo
+ ********************/
 
 struct ToxFileTransferInfo
 {
@@ -77,6 +83,10 @@ struct ToxFileTransferInfo
 
 Q_DECLARE_METATYPE(ToxFileTransferInfo)
 
+/********************
+ * ToxFileTransfer
+ ********************/
+
 class ToxFileTransfer
 {
 public:
@@ -89,10 +99,11 @@ public:
 
     void setStatus(ToxFileTransferInfo::Status status);
     void setDestination(const QString& path);
+    void flush();
 
     ToxFileTransferInfo getInfo();
-    int getFriendnumber() const;
     bool isValid() const;
+
     QByteArray read(qint64 offset, qint64 maxLen);
     void unread(qint64 len);
     void write(const QByteArray& data);
@@ -105,4 +116,37 @@ private:
     ToxFileTransferInfo info;
     bool valid;
 };
+
+/********************
+ * CoreFileModule
+ ********************/
+
+class CoreIOModule : public CoreModule
+{
+    Q_OBJECT
+public:
+    CoreIOModule(QObject* parent, Tox* tox, QMutex* mutex);
+    void update();
+
+signals:
+    void fileTransferRequested(ToxFileTransferInfo info);
+    void fileTransferFeedback(ToxFileTransferInfo info);
+
+public slots:
+    void sendFile(int friendnumber, QString filePath);
+    void acceptFile(ToxFileTransferInfo info, QString path);
+    void killFile(ToxFileTransferInfo info);
+    void pauseFile(ToxFileTransferInfo info);
+    void resumeFile(ToxFileTransferInfo info);
+
+private:
+    // callbacks -- userdata is always a pointer to an instance of this class
+    static void callbackFileControl(Tox* tox, int32_t friendnumber, uint8_t receive_send, uint8_t filenumber, uint8_t control_type, const uint8_t* data, uint16_t length, void* userdata);
+    static void callbackFileData(Tox *tox, int32_t friendnumber, uint8_t filenumber, const uint8_t *data, uint16_t length, void *userdata);
+    static void callbackFileSendRequest(Tox *tox, int32_t friendnumber, uint8_t filenumber, uint64_t filesize, const uint8_t *filename, uint16_t filename_length, void *userdata);
+
+private:
+    QMap<int, ToxFileTransfer::Ptr> m_fileTransfers;
+};
+
 #endif // IO_H

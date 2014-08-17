@@ -129,7 +129,7 @@ FileTransfertWidget::FileTransfertWidget(ToxFileTransferInfo Info)
     buttonLayout->setContentsMargins(2, 0, 0, 0);
     buttonLayout->setSpacing(0);
 
-    connect(Widget::getInstance()->getCore(), &Core::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
+    connect(Widget::getInstance()->getCore()->ioModule(), &CoreIOModule::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
 }
 
 QString FileTransfertWidget::getHumanReadableSize(int size)
@@ -143,7 +143,7 @@ QString FileTransfertWidget::getHumanReadableSize(int size)
 
 void FileTransfertWidget::onEndOfTransmission()
 {
-    disconnect(Widget::getInstance()->getCore(), &Core::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
+    disconnect(Widget::getInstance()->getCore()->ioModule(), &CoreIOModule::fileTransferFeedback, this, &FileTransfertWidget::onFileTransferInfo);
 
     progress->hide();
     speed->hide();
@@ -220,7 +220,7 @@ void FileTransfertWidget::onFileTransferInfo(ToxFileTransferInfo currInfo)
 
 void FileTransfertWidget::cancelTransfer()
 {
-    Widget::getInstance()->getCore()->killFile(info);
+    Widget::getInstance()->getCore()->ioModule()->killFile(info);
 }
 
 void FileTransfertWidget::acceptRecvRequest()
@@ -229,7 +229,7 @@ void FileTransfertWidget::acceptRecvRequest()
     QFileInfo dirInfo(path);
 
     if (!path.isEmpty() && dirInfo.isDir() && dirInfo.isWritable()) {
-        Widget::getInstance()->getCore()->acceptFile(info, path);
+        Widget::getInstance()->getCore()->ioModule()->acceptFile(info, path);
 
         bottomright->setStyleSheet(pauseFileButtonStylesheet);
         bottomright->disconnect();
@@ -242,10 +242,10 @@ void FileTransfertWidget::acceptRecvRequest()
 void FileTransfertWidget::pauseResume()
 {
     if (info.status == ToxFileTransferInfo::Paused)
-        Widget::getInstance()->getCore()->resumeFile(info);
+        Widget::getInstance()->getCore()->ioModule()->resumeFile(info);
 
     if (info.status == ToxFileTransferInfo::Transit)
-        Widget::getInstance()->getCore()->pauseFile(info);
+        Widget::getInstance()->getCore()->ioModule()->pauseFile(info);
 }
 
 void FileTransfertWidget::paintEvent(QPaintEvent*)
