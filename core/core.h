@@ -26,6 +26,7 @@
 #include <QMap>
 
 #include "io.h"
+#include "messaging.h"
 
 #define TOX_CONFIG_FILE_NAME "data"
 
@@ -65,6 +66,7 @@ public:
     void saveConfig(const QString& filename);
 
     CoreIOModule* ioModule();
+    CoreMessagingModule* msgModule();
 
 signals:
     // user
@@ -79,7 +81,6 @@ signals:
     void friendStatusMessageChanged(int friendnumber, QString msg);
     void friendUsernameChanged(int friendnumber, QString newName);
     void friendRequestReceived(QString publicKey, QString msg);
-    void friendMessageReceived(int friendnumber, QString msg);
 
 public slots:
     void start();
@@ -93,7 +94,6 @@ public slots:
     void acceptFriendRequest(QString clientId);
     void sendFriendRequest(QString address, QString msg);
     void removeFriend(int friendnumber);
-    void sendMessage(int friendnumber, QString msg);
 
 private slots:
     void onTimeout();
@@ -111,13 +111,11 @@ protected:
     void queryUserStatusMessage();
 
     void changeStatus(Status newStatus);
-    void progressFileTransfers();
 
 private:
     // callbacks -- userdata is always a pointer to an instance of Core
     static void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata);
     static void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata);
-    static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
     static void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata);
     static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
     static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
@@ -134,6 +132,7 @@ private:
     QVector<ToxDhtServer> bootstrapServers;
 
     CoreIOModule* m_ioModule;
+    CoreMessagingModule* m_msgModule;
 };
 
 #endif // CORE_H

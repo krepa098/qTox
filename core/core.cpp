@@ -70,15 +70,6 @@ void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint
     emit core->friendRequestReceived(pubkey.toHex().toUpper(), msg);
 }
 
-void Core::callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(message), length);
-    emit core->friendMessageReceived(friendnumber, msg);
-}
-
 void Core::callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata)
 {
     Q_UNUSED(tox)
@@ -122,11 +113,13 @@ Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
     , ipV6Enabled(enableIPv6)
     , bootstrapServers(dhtServers)
     , m_ioModule(nullptr)
+    , m_msgModule(nullptr)
 {
     initCore();
     setupCallbacks();
 
     m_ioModule = new CoreIOModule(this, tox, &mutex);
+    m_msgModule = new CoreMessagingModule(this, tox, &mutex);
 }
 
 Core::~Core()
@@ -170,8 +163,8 @@ void Core::onTimeout()
     ticker.setInterval(qMax(1, int(tox_do_interval(tox))));
 
     toxDo();
-    progressFileTransfers();
     m_ioModule->update();
+    m_msgModule->update();
 
     if (isConnected()) {
         if (info == Status::Offline)
@@ -211,6 +204,11 @@ CoreIOModule *Core::ioModule()
     return m_ioModule;
 }
 
+CoreMessagingModule *Core::msgModule()
+{
+    return m_msgModule;
+}
+
 void Core::initCore()
 {
     QMutexLocker lock(&mutex);
@@ -224,7 +222,6 @@ void Core::initCore()
 void Core::setupCallbacks()
 {
     tox_callback_friend_request(tox, callbackFriendRequest, this);
-    tox_callback_friend_message(tox, callbackFriendMessage, this);
     tox_callback_friend_action(tox, callbackFriendAction, this);
     tox_callback_status_message(tox, callbackStatusMessage, this);
     tox_callback_user_status(tox, callbackUserStatus, this);
@@ -342,11 +339,6 @@ void Core::changeStatus(Status newStatus)
     }
 }
 
-void Core::progressFileTransfers()
-{
-
-}
-
 void Core::acceptFriendRequest(QString clientId)
 {
     QMutexLocker lock(&mutex);
@@ -379,14 +371,6 @@ void Core::removeFriend(int friendnumber)
     QMutexLocker lock(&mutex);
 
     tox_del_friend(tox, friendnumber);
-}
-
-void Core::sendMessage(int friendnumber, QString msg)
-{
-    QMutexLocker lock(&mutex);
-
-    //TODO: split message after TOX_MAX_MESSAGE_LENGTH bytes
-    tox_send_message(tox, friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
 }
 
 void Core::setUserStatusMessage(QString msg)

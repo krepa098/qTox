@@ -198,7 +198,7 @@ Widget::Widget(QWidget *parent)
     //    connect(core, &Core::friendUsernameLoaded, this, &Widget::onFriendUsernameLoaded);
     //    connect(core, &Core::friendStatusMessageLoaded, this, &Widget::onFriendStatusMessageLoaded);
     connect(core, &Core::friendRequestReceived, this, &Widget::onFriendRequestReceived);
-    connect(core, &Core::friendMessageReceived, this, &Widget::onFriendMessageReceived);
+    connect(core->msgModule(), &CoreMessagingModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
     //    connect(core, &Core::groupInviteReceived, this, &Widget::onGroupInviteReceived);
     //    connect(core, &Core::groupMessageReceived, this, &Widget::onGroupMessageReceived);
     //    connect(core, &Core::groupNamelistChanged, this, &Widget::onGroupNamelistChanged);
@@ -432,7 +432,7 @@ void Widget::addFriend(int friendId, const QString &userId)
     connect(newfriend->widget, &FriendWidget::friendWidgetClicked, this, &Widget::onFriendWidgetClicked);
     connect(newfriend->widget, &FriendWidget::removeFriend, this, &Widget::removeFriend);
     connect(newfriend->widget, &FriendWidget::copyFriendIdToClipboard, this, &Widget::copyFriendIdToClipboard);
-    connect(newfriend->chatForm, &ChatForm::sendMessage, core, &Core::sendMessage);
+    connect(newfriend->chatForm, &ChatForm::sendMessage, core->msgModule(), &CoreMessagingModule::sendMessage);
 
     connect(newfriend->chatForm, &ChatForm::sendFile, core->ioModule(), &CoreIOModule::sendFile);
 
