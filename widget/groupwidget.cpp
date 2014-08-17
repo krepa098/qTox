@@ -20,6 +20,7 @@
 #include <QPalette>
 #include <QMenu>
 #include <QContextMenuEvent>
+#include <QDebug>
 
 GroupWidget::GroupWidget(int GroupId, QString Name)
     : groupId{GroupId}
@@ -51,7 +52,7 @@ GroupWidget::GroupWidget(int GroupId, QString Name)
     this->setPalette(pal3);
     Group* g = GroupList::findGroup(groupId);
     if (g)
-        nusers.setText(GroupWidget::tr("%1 users in chat").arg(g->peers.size()));
+        nusers.setText(GroupWidget::tr("%1 users in chat").arg(g->peerCount()));
     else
         nusers.setText(GroupWidget::tr("0 users in chat"));
 
@@ -137,8 +138,11 @@ void GroupWidget::leaveEvent(QEvent*)
 void GroupWidget::onUserListChanged()
 {
     Group* g = GroupList::findGroup(groupId);
+
+    qDebug() << "onUserListChanged" << groupId << g << g->peerCount();
+
     if (g)
-        nusers.setText(tr("%1 users in chat").arg(g->nPeers));
+        nusers.setText(tr("%1 users in chat").arg(g->peerCount()));
     else
         nusers.setText(tr("0 users in chat"));
 }

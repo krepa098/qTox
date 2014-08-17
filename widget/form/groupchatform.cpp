@@ -46,11 +46,11 @@ GroupChatForm::GroupChatForm(Group* chatGroup)
     name->setText(group->widget->name.text());
     name->setFont(bold);
     nusers->setFont(small);
-    nusers->setText(GroupChatForm::tr("%1 users in chat","Number of users in chat").arg(group->peers.size()));
+    //nusers->setText(GroupChatForm::tr("%1 users in chat","Number of users in chat").arg(group->peers.size()));
     avatar->setPixmap(QPixmap(":/img/group.png"));
     QString names;
-    for (QString& s : group->peers)
-        names.append(s+", ");
+//    for (QString& s : group->peers)
+//        names.append(s+", ");
     names.chop(2);
     namesList->setText(names);
     namesList->setFont(small);
@@ -140,10 +140,10 @@ void GroupChatForm::onSendTriggered()
 void GroupChatForm::addGroupMessage(QString message, int peerId)
 {
     QLabel *msgAuthor;
-    if (group->peers.contains(peerId))
-        msgAuthor = new QLabel(group->peers[peerId]);
-    else
-        msgAuthor = new QLabel(tr("<Unknown>"));
+//    if (group->peers.contains(peerId))
+//        msgAuthor = new QLabel(group->peers[peerId]);
+//    else
+//        msgAuthor = new QLabel(tr("<Unknown>"));
 
     QLabel *msgText = new QLabel(message);
     QLabel *msgDate = new QLabel(QTime::currentTime().toString("hh:mm"));
@@ -210,11 +210,11 @@ void GroupChatForm::onSliderRangeChanged()
          scroll->setValue(scroll->maximum());
 }
 
-void GroupChatForm::onUserListChanged()
+void GroupChatForm::onUserListChanged(QMap<int,QString> peers)
 {
-    nusers->setText(tr("%1 users in chat").arg(group->nPeers));
+    nusers->setText(tr("%1 users in chat").arg(group->peerCount()));
     QString names;
-    for (QString& s : group->peers)
+    for (QString& s : peers)
         names.append(s+", ");
     names.chop(2);
     namesList->setText(names);

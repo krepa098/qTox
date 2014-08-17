@@ -37,17 +37,21 @@ public:
     void removePeer(int peerId);
     void updatePeer(int peerId, QString newName);
 
+    int peerCount();
+
 private slots:
-    void queryPeerInfo();
+    void onPeerJoined(int groupnumber, int peer, QString name);
+    void onPeerNameChanged(int groupnumber, int peer, QString name);
+    void onPeerLeft(int groupnumber, int peer);
+
+private:
+    QMap<int,QString> peers;
 
 public:
     int groupId;
-    QMap<int,QString> peers;
-    int nPeers;
+
     GroupWidget* widget;
     GroupChatForm* chatForm;
-    bool hasPeerInfo;
-    QTimer peerInfoTimer;
     int hasNewMessages, userWasMentioned;
 };
 

@@ -199,6 +199,14 @@ Widget::Widget(QWidget *parent)
     //    connect(core, &Core::friendStatusMessageLoaded, this, &Widget::onFriendStatusMessageLoaded);
     connect(core, &Core::friendRequestReceived, this, &Widget::onFriendRequestReceived);
     connect(core->msgModule(), &CoreMessagingModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
+
+
+    // groups
+    connect(core->msgModule(), &CoreMessagingModule::groupCreated, this, &Widget::onEmptyGroupCreated);
+    connect(core->msgModule(), &CoreMessagingModule::groupInviteReceived, this, &Widget::onGroupInviteReceived);
+    connect(core->msgModule(), &CoreMessagingModule::groupJoined, this, &Widget::onGroupJoined);
+    connect(core->msgModule(), &CoreMessagingModule::groupMessage, this, &Widget::onGroupMessageReceived);
+
     //    connect(core, &Core::groupInviteReceived, this, &Widget::onGroupInviteReceived);
     //    connect(core, &Core::groupMessageReceived, this, &Widget::onGroupMessageReceived);
     //    connect(core, &Core::groupNamelistChanged, this, &Widget::onGroupNamelistChanged);
@@ -218,9 +226,11 @@ Widget::Widget(QWidget *parent)
     connect(ui->settingsButton, SIGNAL(clicked()), this, SLOT(onSettingsClicked()));
     connect(ui->nameLabel, &EditableLabelWidget::textChanged, this, &Widget::onUsernameChanged);
     connect(ui->statusLabel, SIGNAL(textChanged(QString,QString)), this, SLOT(onStatusMessageChanged(QString,QString)));
+
     connect(setStatusOnline, SIGNAL(triggered()), this, SLOT(setStatusOnline()));
     connect(setStatusAway, SIGNAL(triggered()), this, SLOT(setStatusAway()));
     connect(setStatusBusy, SIGNAL(triggered()), this, SLOT(setStatusBusy()));
+
     //connect(&settingsForm.name, SIGNAL(editingFinished()), this, SLOT(onUsernameChanged()));
 
     //connect(&friendForm, SIGNAL(friendRequested(QString,QString)), this, SIGNAL(friendRequested(QString,QString)));
@@ -335,7 +345,7 @@ void Widget::onAddClicked()
 
 void Widget::onGroupClicked()
 {
-    //core->createGroup();
+    core->msgModule()->createGroup();
 }
 
 void Widget::onTransferClicked()
@@ -615,46 +625,41 @@ void Widget::copyFriendIdToClipboard(int friendId)
     }
 }
 
-void Widget::onGroupInviteReceived(int32_t friendId, const uint8_t* publicKey)
+void Widget::onGroupInviteReceived(int32_t friendId, QString groupPublicKey)
 {
-    //    int groupId = core->joinGroupchat(friendId, publicKey);
-    //    if (groupId == -1)
-    //    {
-    //        qWarning() << "Widget::onGroupInviteReceived: Unable to accept invitation";
-    //        return;
-    //    }
+    core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
 }
 
 void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message)
 {
-    //    Group* g = GroupList::findGroup(groupnumber);
-    //    if (!g)
-    //        return;
+        Group* g = GroupList::findGroup(groupnumber);
+        if (!g)
+            return;
 
-    //    g->chatForm->addGroupMessage(message, friendgroupnumber);
+        g->chatForm->addGroupMessage(message, friendgroupnumber);
 
-    //    if ((isGroupWidgetActive != 1 || (g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
-    //    {
-    //        if (message.contains(core->getUsername(), Qt::CaseInsensitive))
-    //        {
-    //            newMessageAlert();
-    //            g->hasNewMessages = 1;
-    //            g->userWasMentioned = 1;
-    //            if (Settings::getInstance().getUseNativeDecoration())
-    //                g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
-    //            else
-    //                g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_notification.png"));
-    //        }
-    //        else
-    //            if (g->hasNewMessages == 0)
-    //            {
-    //                g->hasNewMessages = 1;
-    //                if (Settings::getInstance().getUseNativeDecoration())
-    //                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
-    //                else
-    //                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_newmessages.png"));
-    //            }
-    //    }
+        if ((isGroupWidgetActive != 1 || (g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
+        {
+            if (message.contains(core->getUsername(), Qt::CaseInsensitive))
+            {
+                newMessageAlert();
+                g->hasNewMessages = 1;
+                g->userWasMentioned = 1;
+                if (Settings::getInstance().getUseNativeDecoration())
+                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
+                else
+                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_notification.png"));
+            }
+            else
+                if (g->hasNewMessages == 0)
+                {
+                    g->hasNewMessages = 1;
+                    if (Settings::getInstance().getUseNativeDecoration())
+                        g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
+                    else
+                        g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_newmessages.png"));
+                }
+        }
 }
 
 void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Change)
@@ -703,17 +708,22 @@ void Widget::onGroupWidgetClicked(GroupWidget* widget)
     }
 }
 
+void Widget::onGroupJoined(int groupnumber)
+{
+    createGroup(groupnumber);
+}
+
 void Widget::removeGroup(int groupId)
 {
-    //    Group* g = GroupList::findGroup(groupId);
-    //    g->widget->setAsInactiveChatroom();
-    //    if (g->widget == activeGroupWidget)
-    //        activeGroupWidget = nullptr;
-    //    GroupList::removeGroup(groupId);
-    //    core->removeGroup(groupId);
-    //    delete g;
-    //    if (ui->mainHead->layout()->isEmpty())
-    //        onAddClicked();
+        Group* g = GroupList::findGroup(groupId);
+        g->widget->setAsInactiveChatroom();
+        if (g->widget == activeGroupWidget)
+            activeGroupWidget = nullptr;
+        GroupList::removeGroup(groupId);
+        core->msgModule()->removeGroup(groupId);
+        delete g;
+        if (ui->mainHead->layout()->isEmpty())
+            onAddClicked();
 }
 
 Core *Widget::getCore()
@@ -723,6 +733,7 @@ Core *Widget::getCore()
 
 Group *Widget::createGroup(int groupId)
 {
+    qDebug() << "Create group" << groupId;
     Group* g = GroupList::findGroup(groupId);
     if (g)
     {
@@ -740,7 +751,9 @@ Group *Widget::createGroup(int groupId)
 
     connect(newgroup->widget, SIGNAL(groupWidgetClicked(GroupWidget*)), this, SLOT(onGroupWidgetClicked(GroupWidget*)));
     connect(newgroup->widget, SIGNAL(removeGroup(int)), this, SLOT(removeGroup(int)));
-    connect(newgroup->chatForm, SIGNAL(sendMessage(int,QString)), core, SLOT(sendGroupMessage(int,QString)));
+
+    connect(newgroup->chatForm, &GroupChatForm::sendMessage, core->msgModule(), &CoreMessagingModule::sendGroupMessage);
+
     return newgroup;
 }
 

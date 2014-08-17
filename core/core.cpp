@@ -65,7 +65,7 @@ void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint
     Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
-    QByteArray pubkey(reinterpret_cast<const char*>(public_key), TOX_CLIENT_ID_SIZE);
+    QByteArray pubkey(CPtr(public_key), TOX_CLIENT_ID_SIZE);
     QString msg = QString::fromUtf8(reinterpret_cast<const char*>(data), length);
     emit core->friendRequestReceived(pubkey.toHex().toUpper(), msg);
 }
@@ -114,6 +114,7 @@ Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
     , bootstrapServers(dhtServers)
     , m_ioModule(nullptr)
     , m_msgModule(nullptr)
+    , mutex(QMutex::Recursive)
 {
     initCore();
     setupCallbacks();

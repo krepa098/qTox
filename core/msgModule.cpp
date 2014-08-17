@@ -17,6 +17,7 @@
 #include "msgModule.h"
 
 #include <QMutexLocker>
+#include <QDebug>
 #include <tox/tox.h>
 
 #define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
@@ -27,6 +28,9 @@ CoreMessagingModule::CoreMessagingModule(QObject *parent, Tox *tox, QMutex *mute
 {
     // setup callbacks
     tox_callback_friend_message(tox, callbackFriendMessage, this);
+    tox_callback_group_invite(tox, callbackGroupInvite, this);
+    tox_callback_group_message(tox, callbackGroupMessage, this);
+    tox_callback_group_namelist_change(tox, callbackGroundNamelistChanged, this);
 }
 
 void CoreMessagingModule::update()
@@ -42,6 +46,53 @@ void CoreMessagingModule::sendMessage(int friendnumber, QString msg)
     tox_send_message(tox(), friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
 }
 
+void CoreMessagingModule::acceptGroupInvite(int friendnumber, QString groupPubKey)
+{
+    QMutexLocker lock(coreMutex());
+
+    int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.toLower().toLatin1().data()));
+    if (groupnumber >= 0)
+    {
+        emit groupJoined(groupnumber);
+    }
+}
+
+void CoreMessagingModule::sendGroupInvite(int friendnumber, int groupnumber)
+{
+    QMutexLocker lock(coreMutex());
+
+    tox_invite_friend(tox(), friendnumber, groupnumber);
+}
+
+void CoreMessagingModule::createGroup()
+{
+    QMutexLocker lock(coreMutex());
+
+    int groupnumber = tox_add_groupchat(tox());
+    if (groupnumber >= 0)
+    {
+        emit groupCreated(groupnumber);
+    }
+}
+
+void CoreMessagingModule::removeGroup(int groupnumber)
+{
+    QMutexLocker lock(coreMutex());
+
+    tox_del_groupchat(tox(), groupnumber);
+}
+
+void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
+{
+    QMutexLocker lock(coreMutex());
+
+    tox_group_message_send(tox(), groupnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
+}
+
+/********************
+ * CALLBACKS
+ ********************/
+
 void CoreMessagingModule::callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata)
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
@@ -49,5 +100,46 @@ void CoreMessagingModule::callbackFriendMessage(Tox* tox, int32_t friendnumber, 
     emit module->friendMessageReceived(friendnumber, msg);
 
     Q_UNUSED(tox)
+}
+
+void CoreMessagingModule::callbackGroupInvite(Tox *tox, int friendnumber, const uint8_t *group_public_key, void *userdata)
+{
+    CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
+    QByteArray pubkey(CPtr(group_public_key), TOX_CLIENT_ID_SIZE);
+    emit module->groupInviteReceived(friendnumber, pubkey.toHex().toUpper());
+
+    Q_UNUSED(tox)
+}
+
+void CoreMessagingModule::callbackGroupMessage(Tox *tox, int groupnumber, int friendgroupnumber, const uint8_t *message, uint16_t length, void *userdata)
+{
+    CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
+    QByteArray msgData(CPtr(message), length);
+    emit module->groupMessage(groupnumber, friendgroupnumber, QString::fromUtf8(msgData));
+
+    Q_UNUSED(tox)
+}
+
+void CoreMessagingModule::callbackGroundNamelistChanged(Tox *tox, int groupnumber, int peer, uint8_t change, void *userdata)
+{
+    CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
+
+    QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
+    tox_group_peername(tox, groupnumber, peer, U8Ptr(nameData.data()));
+
+    qDebug() << "Group " << groupnumber << " Peer " << peer << " name " << QString::fromUtf8(nameData) << " change " << change;
+
+    switch(change)
+    {
+    case TOX_CHAT_CHANGE_PEER_ADD:
+        emit module->groupPeerJoined(groupnumber, peer, QString::fromUtf8(nameData));
+        break;
+    case TOX_CHAT_CHANGE_PEER_DEL:
+        emit module->groupPeerLeft(groupnumber, peer);
+        break;
+    case TOX_CHAT_CHANGE_PEER_NAME:
+        emit module->groupPeerNameChanged(groupnumber, peer, QString::fromUtf8(nameData));
+        break;
+    }
 }
 
