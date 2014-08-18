@@ -17,6 +17,7 @@
 #ifndef MSGMODULE_H
 #define MSGMODULE_H
 
+#include <QMap>
 #include "module.h"
 
 class CoreMessagingModule : public CoreModule
@@ -32,7 +33,7 @@ signals:
     // group chats
     void groupInviteReceived(int friendnumber, QByteArray groupPubKey);
     void groupMessage(int groupnumber, int friendgroupnumber, QString msg);
-    void groupJoined(int groupnumber, QByteArray groupPubKey);
+    void groupJoined(int groupnumber);
     void groupCreated(int groupnumber);
     void groupPeerNameChanged(int groupnumber, int peer, QString name);
     void groupPeerJoined(int groupnumber, int peer, QString name);
@@ -56,7 +57,8 @@ private:
     static void callbackGroundNamelistChanged(Tox *tox, int groupnumber, int peer, uint8_t change, void *userdata);
 
 private:
-    bool m_queueUpNamelistChanges();
+    QMap<QByteArray, int> m_invitedGroups;
+
 };
 
 #endif // MSGMODULE_H

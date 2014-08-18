@@ -157,13 +157,13 @@ Widget::Widget(QWidget *parent)
     camera = new Camera;
     camview = new SelfCamView(camera);
 
-//    qRegisterMetaType<Status>("Status");
-//    qRegisterMetaType<vpx_image>("vpx_image");
-//    qRegisterMetaType<uint8_t>("uint8_t");
-//    qRegisterMetaType<int32_t>("int32_t");
-//    qRegisterMetaType<int64_t>("int64_t");
-//    qRegisterMetaType<ToxFile>("ToxFile");
-//    qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
+    //    qRegisterMetaType<Status>("Status");
+    //    qRegisterMetaType<vpx_image>("vpx_image");
+    //    qRegisterMetaType<uint8_t>("uint8_t");
+    //    qRegisterMetaType<int32_t>("int32_t");
+    //    qRegisterMetaType<int64_t>("int64_t");
+    //    qRegisterMetaType<ToxFile>("ToxFile");
+    //    qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
 
     ToxDhtServer server;
     server.address = Settings::getInstance().getDhtServerList().at(0).address;
@@ -452,12 +452,12 @@ void Widget::addFriend(int friendId, const QString &userId)
 
     //connect(core, &Core::fileTransferRequested, newfriend->chatForm, &ChatForm::onFileTransferRequest);
 
-//    connect(newfriend->chatForm, SIGNAL(sendFile(int32_t, QString, QString, long long)), core, SLOT(sendFile(int32_t, QString, QString, long long)));
-//    connect(newfriend->chatForm, SIGNAL(answerCall(int)), core, SLOT(answerCall(int)));
-//    connect(newfriend->chatForm, SIGNAL(hangupCall(int)), core, SLOT(hangupCall(int)));
-//    connect(newfriend->chatForm, SIGNAL(startCall(int)), core, SLOT(startCall(int)));
-//    connect(newfriend->chatForm, SIGNAL(startVideoCall(int,bool)), core, SLOT(startCall(int,bool)));
-//    connect(newfriend->chatForm, SIGNAL(cancelCall(int,int)), core, SLOT(cancelCall(int,int)));
+    //    connect(newfriend->chatForm, SIGNAL(sendFile(int32_t, QString, QString, long long)), core, SLOT(sendFile(int32_t, QString, QString, long long)));
+    //    connect(newfriend->chatForm, SIGNAL(answerCall(int)), core, SLOT(answerCall(int)));
+    //    connect(newfriend->chatForm, SIGNAL(hangupCall(int)), core, SLOT(hangupCall(int)));
+    //    connect(newfriend->chatForm, SIGNAL(startCall(int)), core, SLOT(startCall(int)));
+    //    connect(newfriend->chatForm, SIGNAL(startVideoCall(int,bool)), core, SLOT(startCall(int,bool)));
+    //    connect(newfriend->chatForm, SIGNAL(cancelCall(int,int)), core, SLOT(cancelCall(int,int)));
     //    connect(core, &Core::fileReceiveRequested, newfriend->chatForm, &ChatForm::onFileRecvRequest);
     //    connect(core, &Core::avInvite, newfriend->chatForm, &ChatForm::onAvInvite);
     //    connect(core, &Core::avStart, newfriend->chatForm, &ChatForm::onAvStart);
@@ -631,8 +631,7 @@ void Widget::copyFriendIdToClipboard(int friendId)
 
 void Widget::onGroupInviteReceived(int32_t friendId, QByteArray groupPublicKey)
 {
-    if (!GroupList::contains(groupPublicKey))
-        core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
+    core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
 }
 
 void Widget::onGroupPeerJoined(int groupnumber, int peer, QString name)
@@ -658,34 +657,34 @@ void Widget::onGroupPeerNameChanged(int groupnumber, int peer, QString name)
 
 void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message)
 {
-        Group* g = GroupList::findGroup(groupnumber);
-        if (!g)
-            return;
+    Group* g = GroupList::findGroup(groupnumber);
+    if (!g)
+        return;
 
-        g->chatForm->addGroupMessage(message, friendgroupnumber);
+    g->chatForm->addGroupMessage(message, friendgroupnumber);
 
-        if ((isGroupWidgetActive != 1 || (g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
+    if ((isGroupWidgetActive != 1 || (g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
+    {
+        if (message.contains(core->getUsername(), Qt::CaseInsensitive))
         {
-            if (message.contains(core->getUsername(), Qt::CaseInsensitive))
+            newMessageAlert();
+            g->hasNewMessages = 1;
+            g->userWasMentioned = 1;
+            if (Settings::getInstance().getUseNativeDecoration())
+                g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
+            else
+                g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_notification.png"));
+        }
+        else
+            if (g->hasNewMessages == 0)
             {
-                newMessageAlert();
                 g->hasNewMessages = 1;
-                g->userWasMentioned = 1;
                 if (Settings::getInstance().getUseNativeDecoration())
                     g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
                 else
-                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_notification.png"));
+                    g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_newmessages.png"));
             }
-            else
-                if (g->hasNewMessages == 0)
-                {
-                    g->hasNewMessages = 1;
-                    if (Settings::getInstance().getUseNativeDecoration())
-                        g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
-                    else
-                        g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_newmessages.png"));
-                }
-        }
+    }
 }
 
 void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Change)
@@ -734,22 +733,22 @@ void Widget::onGroupWidgetClicked(GroupWidget* widget)
     }
 }
 
-void Widget::onGroupJoined(int groupnumber, QByteArray groupPubKey)
+void Widget::onGroupJoined(int groupnumber)
 {
-    createGroup(groupnumber, groupPubKey);
+    createGroup(groupnumber);
 }
 
 void Widget::removeGroup(int groupId)
 {
-        Group* g = GroupList::findGroup(groupId);
-        g->widget->setAsInactiveChatroom();
-        if (g->widget == activeGroupWidget)
-            activeGroupWidget = nullptr;
-        GroupList::removeGroup(groupId);
-        core->msgModule()->removeGroup(groupId);
-        delete g;
-        if (ui->mainHead->layout()->isEmpty())
-            onAddClicked();
+    Group* g = GroupList::findGroup(groupId);
+    g->widget->setAsInactiveChatroom();
+    if (g->widget == activeGroupWidget)
+        activeGroupWidget = nullptr;
+    GroupList::removeGroup(groupId);
+    core->msgModule()->removeGroup(groupId);
+    delete g;
+    if (ui->mainHead->layout()->isEmpty())
+        onAddClicked();
 }
 
 Core *Widget::getCore()
@@ -757,7 +756,7 @@ Core *Widget::getCore()
     return core;
 }
 
-Group *Widget::createGroup(int groupId, QByteArray groupPublicKey)
+Group *Widget::createGroup(int groupId)
 {
     qDebug() << "Create group" << groupId;
     Group* g = GroupList::findGroup(groupId);
@@ -768,7 +767,7 @@ Group *Widget::createGroup(int groupId, QByteArray groupPublicKey)
     }
 
     QString groupName = QString("Groupchat #%1").arg(groupId);
-    Group* newgroup = GroupList::addGroup(groupId, groupName, groupPublicKey);
+    Group* newgroup = GroupList::addGroup(groupId, groupName);
     QWidget* widget = ui->friendList->widget();
     QLayout* layout = widget->layout();
     layout->addWidget(newgroup->widget);
@@ -790,7 +789,7 @@ void Widget::showTestCamview()
 
 void Widget::onEmptyGroupCreated(int groupId)
 {
-    createGroup(groupId, QByteArray());
+    createGroup(groupId);
 }
 
 bool Widget::isFriendWidgetCurActiveWidget(Friend* f)

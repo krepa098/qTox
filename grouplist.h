@@ -27,10 +27,9 @@ class GroupList
 {
 public:
     GroupList();
-    static Group* addGroup(int groupId, QString name, QByteArray publicKey);
+    static Group* addGroup(int groupId, QString name);
     static Group* findGroup(int groupId);
     static void removeGroup(int groupId);
-    static bool contains(QByteArray publicKey);
 
 public:
     static QList<Group*> groupList;

@@ -48,15 +48,17 @@ void CoreMessagingModule::sendMessage(int friendnumber, QString msg)
 
 void CoreMessagingModule::acceptGroupInvite(int friendnumber, QByteArray groupPubKey)
 {
+    // Known bug: we can join a groupchat more than once
+    // There is not much we can do about it now
+
     QMutexLocker lock(coreMutex());
 
-    int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.data()));
+    if (m_invitedGroups.contains(groupPubKey))
+        return; // already invited to that group
 
+    int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.data()));
     if (groupnumber >= 0)
-    {
-        emit groupJoined(groupnumber, groupPubKey);
-        emit groupPeerJoined(groupnumber, 0, ""); // workaround: tox_join_groupchat calls callbackGroundNamelistChanged(tox, groupNb, 0, "")
-    }
+        m_invitedGroups.insert(groupPubKey, groupnumber);
 }
 
 void CoreMessagingModule::sendGroupInvite(int friendnumber, int groupnumber)
@@ -82,6 +84,9 @@ void CoreMessagingModule::removeGroup(int groupnumber)
     QMutexLocker lock(coreMutex());
 
     tox_del_groupchat(tox(), groupnumber);
+
+    // remove pubKey if there is one so that we can actually rejoin the group
+    m_invitedGroups.remove(m_invitedGroups.key(groupnumber));
 }
 
 void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
@@ -108,6 +113,7 @@ void CoreMessagingModule::callbackGroupInvite(Tox *tox, int friendnumber, const 
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
     QByteArray pubkey(CPtr(group_public_key), TOX_CLIENT_ID_SIZE);
+
     emit module->groupInviteReceived(friendnumber, pubkey);
 
     Q_UNUSED(tox)
@@ -129,12 +135,17 @@ void CoreMessagingModule::callbackGroundNamelistChanged(Tox *tox, int groupnumbe
     QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
     tox_group_peername(tox, groupnumber, peer, U8Ptr(nameData.data()));
 
-    qDebug() << "Group " << groupnumber << " Peer " << peer << " name " << QString::fromUtf8(nameData) << " change " << change;
-
     switch(change)
     {
     case TOX_CHAT_CHANGE_PEER_ADD:
+        if (peer == 0)
+        {
+            qDebug() << "GroupJoin";
+            emit module->groupJoined(groupnumber);
+        }
+
         emit module->groupPeerJoined(groupnumber, peer, QString::fromUtf8(nameData));
+
         break;
     case TOX_CHAT_CHANGE_PEER_DEL:
         emit module->groupPeerLeft(groupnumber, peer);
@@ -143,5 +154,7 @@ void CoreMessagingModule::callbackGroundNamelistChanged(Tox *tox, int groupnumbe
         emit module->groupPeerNameChanged(groupnumber, peer, QString::fromUtf8(nameData));
         break;
     }
+
+    qDebug() << "Group " << groupnumber << " Peer " << peer << " name " << QString::fromUtf8(nameData) << " change " << change;
 }
 

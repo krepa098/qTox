@@ -106,7 +106,7 @@ private slots:
     void onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message);
     void onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t change);
     void onGroupWidgetClicked(GroupWidget* widget);
-    void onGroupJoined(int groupnumber, QByteArray groupPubKey);
+    void onGroupJoined(int groupnumber);
 
     void removeFriend(int friendId);
     void copyFriendIdToClipboard(int friendId);
@@ -120,7 +120,7 @@ protected slots:
 
 private:
     void hideMainForms();
-    Group* createGroup(int groupId, QByteArray groupPublicKey);
+    Group* createGroup(int groupId);
 
 private:
     Ui::MainWindow *ui;

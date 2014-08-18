@@ -23,9 +23,8 @@
 #include "core/core.h"
 #include <QDebug>
 
-Group::Group(int GroupId, QString Name, QByteArray publicKey)
+Group::Group(int GroupId, QString Name)
     : groupId(GroupId)
-    , pubKey(publicKey)
 {
     widget = new GroupWidget(groupId, Name);
     chatForm = new GroupChatForm(this);
@@ -73,9 +72,4 @@ int Group::peerCount() const
 QString Group::peerName(int peer) const
 {
     return peers.value(peer, tr("<unknown>"));
-}
-
-QByteArray Group::getPublicKey() const
-{
-    return pubKey;
 }

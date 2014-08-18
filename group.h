@@ -31,7 +31,7 @@ class Group : public QObject
 {
     Q_OBJECT
 public:
-    Group(int GroupId, QString Name, QByteArray publicKey);
+    Group(int GroupId, QString Name);
     ~Group();
     void addPeer(int peerId, QString name);
     void removePeer(int peerId);
@@ -39,14 +39,12 @@ public:
 
     int peerCount() const;
     QString peerName(int peer) const;
-    QByteArray getPublicKey() const;
 
 private:
     QMap<int,QString> peers;
 
 public:
     int groupId;
-    QByteArray pubKey;
 
     GroupWidget* widget;
     GroupChatForm* chatForm;
