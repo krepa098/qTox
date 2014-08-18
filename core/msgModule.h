@@ -20,8 +20,7 @@
 #include <QMap>
 #include "module.h"
 
-class CoreMessagingModule : public CoreModule
-{
+class CoreMessagingModule : public CoreModule {
     Q_OBJECT
 public:
     CoreMessagingModule(QObject* parent, Tox* tox, QMutex* mutex);
@@ -52,13 +51,13 @@ public slots:
 private:
     // callbacks -- userdata is always a pointer to an instance of this class
     static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
-    static void callbackGroupInvite(Tox *tox, int friendnumber, const uint8_t *group_public_key, void *userdata);
-    static void callbackGroupMessage(Tox *tox, int groupnumber, int friendgroupnumber, const uint8_t * message, uint16_t length, void *userdata);
-    static void callbackGroundNamelistChanged(Tox *tox, int groupnumber, int peer, uint8_t change, void *userdata);
+    static void callbackGroupInvite(Tox* tox, int friendnumber, const uint8_t* group_public_key, void* userdata);
+    static void callbackGroupMessage(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* message, uint16_t length, void* userdata);
+    static void callbackGroupNamelistChanged(Tox* tox, int groupnumber, int peer, uint8_t change, void* userdata);
+    static void callbackGroupAction(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* action, uint16_t length, void* userdata);
 
 private:
     QMap<QByteArray, int> m_invitedGroups;
-
 };
 
 #endif // MSGMODULE_H

@@ -139,8 +139,6 @@ void GroupWidget::onUserListChanged()
 {
     Group* g = GroupList::findGroup(groupId);
 
-    qDebug() << "onUserListChanged" << groupId << g << g->peerCount();
-
     if (g)
         nusers.setText(tr("%1 users in chat").arg(g->peerCount()));
     else
