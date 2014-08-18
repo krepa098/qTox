@@ -197,9 +197,7 @@ Widget::Widget(QWidget *parent)
     connect(core, &Core::friendStatusMessageChanged, this, &Widget::onFriendStatusMessageChanged);
     //    connect(core, &Core::friendUsernameLoaded, this, &Widget::onFriendUsernameLoaded);
     //    connect(core, &Core::friendStatusMessageLoaded, this, &Widget::onFriendStatusMessageLoaded);
-    connect(core, &Core::friendRequestReceived, this, &Widget::onFriendRequestReceived);
     connect(core->msgModule(), &CoreMessagingModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
-
 
     // groups
     connect(core->msgModule(), &CoreMessagingModule::groupCreated, this, &Widget::onEmptyGroupCreated);
@@ -211,14 +209,13 @@ Widget::Widget(QWidget *parent)
     connect(core->msgModule(), &CoreMessagingModule::groupPeerLeft, this, &Widget::onGroupPeerRemoved);
     connect(core->msgModule(), &CoreMessagingModule::groupPeerNameChanged, this, &Widget::onGroupPeerNameChanged);
 
-    //    connect(core, &Core::groupInviteReceived, this, &Widget::onGroupInviteReceived);
-    //    connect(core, &Core::groupMessageReceived, this, &Widget::onGroupMessageReceived);
-    //    connect(core, &Core::groupNamelistChanged, this, &Widget::onGroupNamelistChanged);
-    //    connect(core, &Core::emptyGroupCreated, this, &Widget::onEmptyGroupCreated);
-
-    connect(this, &Widget::statusSet, core, &Core::setUserStatus);
-    connect(this, &Widget::friendRequested, core, &Core::sendFriendRequest);
+    // friend requests
+    connect(&friendForm, &AddFriendForm::friendRequested, core, &Core::sendFriendRequest);
     connect(this, &Widget::friendRequestAccepted, core, &Core::acceptFriendRequest);
+    connect(core, &Core::friendRequestReceived, this, &Widget::onFriendRequestReceived);
+
+    // status changes
+    connect(this, &Widget::statusSet, core, &Core::setUserStatus);
     connect(this, &Widget::statusMessageChanged, core, &Core::setUserStatusMessage);
 
     connect(core, &Core::userIdChanged, &settingsForm, &SettingsForm::onUserIdChanged);
@@ -236,8 +233,6 @@ Widget::Widget(QWidget *parent)
     connect(setStatusBusy, SIGNAL(triggered()), this, SLOT(setStatusBusy()));
 
     //connect(&settingsForm.name, SIGNAL(editingFinished()), this, SLOT(onUsernameChanged()));
-
-    //connect(&friendForm, SIGNAL(friendRequested(QString,QString)), this, SIGNAL(friendRequested(QString,QString)));
 
     coreThread->start();
 
