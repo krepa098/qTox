@@ -658,7 +658,7 @@ void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, cons
 
     g->chatForm->addGroupMessage(message, friendgroupnumber);
 
-    if ((isGroupWidgetActive != 1 || (g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
+    if ((isGroupWidgetActive != 1 || (activeGroupWidget && g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
     {
         if (message.contains(core->getUsername(), Qt::CaseInsensitive))
         {
