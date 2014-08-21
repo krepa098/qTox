@@ -27,8 +27,6 @@ struct ToxGroupInfo {
     int peerCount;
     QMap<int, QString> peers;
     ToxPublicKey key;
-
-    bool update();
 };
 
 struct ToxGroup {
@@ -80,7 +78,7 @@ private:
     static void callbackGroupAction(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* action, uint16_t length, void* userdata);
 
 protected:
-    bool inGroup(ToxPublicKey key) const;
+    bool inGroup(const ToxPublicKey& key) const;
 
 private:
     QMap<int, ToxGroup> m_groups;

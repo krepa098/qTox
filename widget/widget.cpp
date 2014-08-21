@@ -594,9 +594,9 @@ void Widget::newMessageAlert()
     QSound::play(":audio/notification.wav");
 }
 
-void Widget::onFriendRequestReceived(const QString& userId, const QString& message)
+void Widget::onFriendRequestReceived(const ToxPublicKey& userId, const QString& message)
 {
-    FriendRequestDialog dialog(this, userId, message);
+    FriendRequestDialog dialog(this, userId.toHex().toUpper(), message);
 
     if (dialog.exec() == QDialog::Accepted)
         emit friendRequestAccepted(userId);
@@ -625,7 +625,7 @@ void Widget::copyFriendIdToClipboard(int friendId)
     }
 }
 
-void Widget::onGroupInviteReceived(int32_t friendId, QByteArray groupPublicKey)
+void Widget::onGroupInviteReceived(int friendId, ToxPublicKey groupPublicKey)
 {
     core->msgModule()->acceptGroupInvite(friendId, groupPublicKey);
 }

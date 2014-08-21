@@ -87,12 +87,12 @@ QString AddFriendForm::getMessage() const
 
 void AddFriendForm::onSendTriggered()
 {
-    QString id = toxId.text().trimmed();
+    QString id = toxId.text();
 
     if (id.isEmpty()) {
         showWarning(tr("Please fill in a valid Tox ID","Tox ID of the friend you're sending a friend request to"));
     } else if (isToxId(id)) {
-        emit friendRequested(id, getMessage());
+        emit friendRequested(ToxAddress::fromHex(id), getMessage());
         this->toxId.setText("");
         this->message.setText("");
     } else {
@@ -147,5 +147,5 @@ void AddFriendForm::handleDnsLookup()
     }
 
     // finally we got it
-    emit friendRequested(friendAdress, getMessage());
+    emit friendRequested(ToxAddress::fromHex(friendAdress), getMessage());
 }

@@ -54,3 +54,4 @@ QString CoreHelpers::StringFromToxUTF8(const uint8_t *data, int length)
 {
     return QString::fromUtf8(reinterpret_cast<const char*>(data), length);
 }
+

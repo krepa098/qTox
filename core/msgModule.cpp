@@ -147,7 +147,7 @@ void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
         tox_group_message_send(tox(), groupnumber, reinterpret_cast<const uint8_t*>(str.data()), str.size());
 }
 
-bool CoreMessagingModule::inGroup(ToxPublicKey key) const
+bool CoreMessagingModule::inGroup(const ToxPublicKey &key) const
 {
     for (const ToxGroup& group : m_groups) {
         if (group.info.key == key)
@@ -173,7 +173,7 @@ void CoreMessagingModule::callbackFriendMessage(Tox* tox, int32_t friendnumber, 
 void CoreMessagingModule::callbackGroupInvite(Tox* tox, int friendnumber, const uint8_t* group_public_key, void* userdata)
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
-    ToxPublicKey pubkey(CPtr(group_public_key), TOX_CLIENT_ID_SIZE);
+    ToxPublicKey pubkey(group_public_key);
 
     emit module->groupInviteReceived(friendnumber, pubkey);
 

@@ -49,60 +49,6 @@ Status mapStatus(uint8_t toxStatus)
 }
 
 /* ====================
- * CALLBACKS
- * ====================*/
-void Core::callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    QString name = QString::fromUtf8(reinterpret_cast<const char*>(newname), length);
-    emit core->friendUsernameChanged(friendnumber, name);
-}
-
-void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    QByteArray pubkey(CPtr(public_key), TOX_CLIENT_ID_SIZE);
-    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(data), length);
-    emit core->friendRequestReceived(pubkey.toHex().toUpper(), msg);
-}
-
-void Core::callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata)
-{
-    Q_UNUSED(tox)
-}
-
-void Core::callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(newstatus), length);
-    emit core->friendStatusMessageChanged(friendnumber, msg);
-}
-
-void Core::callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    emit core->friendStatusChanged(friendnumber, mapStatus(TOX_USERSTATUS));
-}
-
-void Core::callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata)
-{
-    Q_UNUSED(tox)
-
-    Core* core = static_cast<Core*>(userdata);
-    emit core->friendStatusChanged(friendnumber, status == 1 ? Status::Online : Status::Offline);
-
-    qDebug() << "Connection status changed " << friendnumber << status;
-}
-
-/* ====================
  * CORE
  * ====================*/
 
@@ -132,6 +78,8 @@ void Core::registerMetaTypes()
 {
     qRegisterMetaType<Status>();
     qRegisterMetaType<ToxFileTransferInfo>();
+    qRegisterMetaType<ToxPublicKey>();
+    qRegisterMetaType<ToxAddress>();
 }
 
 int Core::getNameMaxLength()
@@ -332,6 +280,14 @@ void Core::setUsername(const QString& username)
     emit usernameChanged(username);
 }
 
+ToxAddress Core::getAddress()
+{
+    ToxAddress address;
+    tox_get_address(tox, U8Ptr(address.data()));
+
+    return address;
+}
+
 void Core::changeStatus(Status newStatus)
 {
     if (info != newStatus) {
@@ -340,31 +296,31 @@ void Core::changeStatus(Status newStatus)
     }
 }
 
-void Core::acceptFriendRequest(QString clientId)
+void Core::acceptFriendRequest(ToxPublicKey friendAddress)
 {
     QMutexLocker lock(&mutex);
 
-    int friendnumber = tox_add_friend_norequest(tox, U8Ptr(QByteArray::fromHex(clientId.toLower().toLatin1()).data()));
+    int friendnumber = tox_add_friend_norequest(tox, U8Ptr(friendAddress.data()));
 
     if (friendnumber >= 0)
         emit friendAdded(friendnumber, "connecting...");
 
-    qDebug() << "Accept friend request " << clientId << "Result:" << friendnumber;
+    qDebug() << "Accept friend request " << friendAddress.toHex().toUpper() << "Result:" << friendnumber;
 }
 
-void Core::sendFriendRequest(QString address, QString msg)
+void Core::sendFriendRequest(ToxAddress address, QString msg)
 {
     QMutexLocker lock(&mutex);
 
     int friendNumber = tox_add_friend(tox,
-                                      U8Ptr(QByteArray::fromHex(address.toLower().toLatin1()).data()),
+                                      address.data(),
                                       U8Ptr(msg.toUtf8().data()),
                                       msg.toUtf8().length());
 
-    emit friendAdded(friendNumber, "connecting...");
-
     if (friendNumber < 0)
         qDebug() << "Failed sending friend request with code " << friendNumber;
+    else
+        emit friendAdded(friendNumber, "connecting...");
 }
 
 void Core::removeFriend(int friendnumber)
@@ -389,4 +345,63 @@ void Core::setUserStatus(Status newStatus)
 
     tox_set_user_status(tox, uint8_t(newStatus));
     changeStatus(newStatus);
+}
+
+/* ====================
+ * CALLBACKS
+ * ====================*/
+
+void Core::callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+    QString name = QString::fromUtf8(reinterpret_cast<const char*>(newname), length);
+    emit core->friendUsernameChanged(friendnumber, name);
+}
+
+void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+    ToxPublicKey pubkey(public_key);
+    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(data), length);
+    emit core->friendRequestReceived(pubkey, msg);
+}
+
+void Core::callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox)
+    Q_UNUSED(friendnumber)
+    Q_UNUSED(action)
+    Q_UNUSED(length)
+    Q_UNUSED(userdata)
+}
+
+void Core::callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(newstatus), length);
+    emit core->friendStatusMessageChanged(friendnumber, msg);
+}
+
+void Core::callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+    emit core->friendStatusChanged(friendnumber, mapStatus(TOX_USERSTATUS));
+}
+
+void Core::callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t status, void* userdata)
+{
+    Q_UNUSED(tox)
+
+    Core* core = static_cast<Core*>(userdata);
+    emit core->friendStatusChanged(friendnumber, status == 1 ? Status::Online : Status::Offline);
+
+    qDebug() << "Connection status changed " << friendnumber << status;
 }

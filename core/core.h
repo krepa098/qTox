@@ -25,10 +25,9 @@
 #include <QVector>
 #include <QMap>
 
+#include "helpers.h"
 #include "ioModule.h"
 #include "msgModule.h"
-
-#define TOX_CONFIG_FILE_NAME "data"
 
 struct Tox;
 
@@ -61,6 +60,7 @@ public:
 
     QString getUsername();
     void setUsername(const QString& username);
+    ToxAddress getAddress();
 
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
@@ -80,7 +80,7 @@ signals:
     void friendStatusChanged(int friendnumber, Status status);
     void friendStatusMessageChanged(int friendnumber, QString msg);
     void friendUsernameChanged(int friendnumber, QString newName);
-    void friendRequestReceived(QString publicKey, QString msg);
+    void friendRequestReceived(ToxPublicKey publicKey, QString msg);
 
 public slots:
     void start();
@@ -91,8 +91,8 @@ public slots:
     void setUserStatus(Status newStatus);
 
     // friends
-    void acceptFriendRequest(QString clientId);
-    void sendFriendRequest(QString address, QString msg);
+    void acceptFriendRequest(ToxPublicKey friendAddress);
+    void sendFriendRequest(ToxAddress address, QString msg);
     void removeFriend(int friendnumber);
 
 private slots:
@@ -124,7 +124,6 @@ private:
 private:
     Tox* tox;
 
-    QMutex mutex;
     QTimer ticker;
 
     Status info;
@@ -133,6 +132,7 @@ private:
 
     CoreIOModule* m_ioModule;
     CoreMessagingModule* m_msgModule;
+    QMutex mutex;
 };
 
 #endif // CORE_H

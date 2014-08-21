@@ -18,6 +18,7 @@
 #define ADDFRIENDFORM_H
 
 #include "ui_mainwindow.h"
+#include "core/helpers.h"
 
 #include <QVBoxLayout>
 #include <QLabel>
@@ -39,7 +40,7 @@ public:
     QString getMessage() const;
 
 signals:
-    void friendRequested(const QString& friendAddress, const QString& message);
+    void friendRequested(const ToxAddress& friendAddress, const QString& message);
 
 private slots:
      void onSendTriggered();

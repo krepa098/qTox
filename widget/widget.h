@@ -29,6 +29,7 @@
 #include "camera.h"
 
 #define PIXELS_TO_ACT 7
+#define TOX_CONFIG_FILE_NAME "data"
 
 namespace Ui {
 class MainWindow;
@@ -63,7 +64,7 @@ public:
     virtual void closeEvent(QCloseEvent *event);
 
 signals:
-    void friendRequestAccepted(const QString& userId);
+    void friendRequestAccepted(const ToxPublicKey& userId);
     void friendRequested(const QString& friendAddress, const QString& message);
     void statusSet(Status status);
     void statusSelected(Status status);
@@ -96,10 +97,10 @@ private slots:
     void onFriendUsernameLoaded(int friendId, const QString& username);
     void onFriendWidgetClicked(FriendWidget* widget);
     void onFriendMessageReceived(int friendId, const QString& message);
-    void onFriendRequestReceived(const QString& userId, const QString& message);
+    void onFriendRequestReceived(const ToxPublicKey &userId, const QString& message);
     void onEmptyGroupCreated(int groupId);
 
-    void onGroupInviteReceived(int32_t friendId, QByteArray groupPublicKey);
+    void onGroupInviteReceived(int friendId, ToxPublicKey groupPublicKey);
     void onGroupPeerJoined(int groupnumber, int peer, QString name);
     void onGroupPeerRemoved(int groupnumber, int peer, QString name);
     void onGroupPeerNameChanged(int groupnumber, int peer, QString name);
