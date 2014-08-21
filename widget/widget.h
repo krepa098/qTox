@@ -104,6 +104,7 @@ private slots:
     void onGroupPeerRemoved(int groupnumber, int peer, QString name);
     void onGroupPeerNameChanged(int groupnumber, int peer, QString name);
     void onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message);
+    void onGroupInfoAvailable(ToxGroupInfo info);
     void onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t change);
     void onGroupWidgetClicked(GroupWidget* widget);
     void onGroupJoined(int groupnumber);

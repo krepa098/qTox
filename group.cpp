@@ -40,28 +40,11 @@ Group::~Group()
     delete widget;
 }
 
-void Group::addPeer(int peerId, QString name)
+void Group::updatePeers(QMap<int, QString> newPeers)
 {
-    peers.insert(peerId, name);
+    peers = newPeers;
     widget->onUserListChanged();
-    chatForm->onUserListChanged(peers);
-}
-
-void Group::removePeer(int peerId)
-{
-    peers.remove(peerId);
-    widget->onUserListChanged();
-    chatForm->onUserListChanged(peers);
-}
-
-void Group::updatePeer(int peerId, QString name)
-{
-    if (peers.contains(peerId))
-    {
-        peers[peerId] = name;
-        widget->onUserListChanged();
-        chatForm->onUserListChanged(peers);
-    }
+    chatForm->onUserListChanged(newPeers);
 }
 
 int Group::peerCount() const

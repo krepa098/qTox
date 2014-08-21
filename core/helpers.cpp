@@ -1,5 +1,5 @@
 #include "helpers.h"
-#include <QString>
+
 #include <QDebug>
 
 QList<QByteArray> CoreHelpers::sliceUTF8After(const QString& utf8Str, char separator, int maxBytes)
@@ -48,4 +48,9 @@ QList<QByteArray> CoreHelpers::sliceUTF8After(const QString& utf8Str, char separ
     out.append(utf8.mid(offset, utf8.size() - offset));
 
     return out;
+}
+
+QString CoreHelpers::StringFromToxUTF8(const uint8_t *data, int length)
+{
+    return QString::fromUtf8(reinterpret_cast<const char*>(data), length);
 }

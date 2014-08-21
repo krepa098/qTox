@@ -33,9 +33,7 @@ class Group : public QObject
 public:
     Group(int GroupId, QString Name);
     ~Group();
-    void addPeer(int peerId, QString name);
-    void removePeer(int peerId);
-    void updatePeer(int peerId, QString newName);
+    void updatePeers(QMap<int, QString> newPeers);
 
     int peerCount() const;
     QString peerName(int peer) const;

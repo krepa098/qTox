@@ -204,6 +204,7 @@ Widget::Widget(QWidget *parent)
     connect(core->msgModule(), &CoreMessagingModule::groupInviteReceived, this, &Widget::onGroupInviteReceived);
     connect(core->msgModule(), &CoreMessagingModule::groupJoined, this, &Widget::onGroupJoined);
     connect(core->msgModule(), &CoreMessagingModule::groupMessage, this, &Widget::onGroupMessageReceived);
+    connect(core->msgModule(), &CoreMessagingModule::groupInfoAvailable, this, &Widget::onGroupInfoAvailable);
     // group peers
     connect(core->msgModule(), &CoreMessagingModule::groupPeerJoined, this, &Widget::onGroupPeerJoined);
     connect(core->msgModule(), &CoreMessagingModule::groupPeerLeft, this, &Widget::onGroupPeerRemoved);
@@ -631,23 +632,23 @@ void Widget::onGroupInviteReceived(int32_t friendId, QByteArray groupPublicKey)
 
 void Widget::onGroupPeerJoined(int groupnumber, int peer, QString name)
 {
-    Group* g = GroupList::findGroup(groupnumber);
-    if (g)
-        g->addPeer(peer, name);
+//    Group* g = GroupList::findGroup(groupnumber);
+//    if (g)
+//        g->addPeer(peer, name);
 }
 
 void Widget::onGroupPeerRemoved(int groupnumber, int peer, QString name)
 {
-    Group* g = GroupList::findGroup(groupnumber);
-    if (g)
-        g->removePeer(peer);
+//    Group* g = GroupList::findGroup(groupnumber);
+//    if (g)
+//        g->removePeer(peer);
 }
 
 void Widget::onGroupPeerNameChanged(int groupnumber, int peer, QString name)
 {
-    Group* g = GroupList::findGroup(groupnumber);
-    if (g)
-        g->updatePeer(peer, name);
+//    Group* g = GroupList::findGroup(groupnumber);
+//    if (g)
+//        g->updatePeer(peer, name);
 }
 
 void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message)
@@ -680,6 +681,13 @@ void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, cons
                     g->widget->statusPic.setPixmap(QPixmap(":img/status/dot_groupchat_newmessages.png"));
             }
     }
+}
+
+void Widget::onGroupInfoAvailable(ToxGroupInfo info)
+{
+    Group* g = GroupList::findGroup(info.number);
+    if (g)
+        g->updatePeers(info.peers);
 }
 
 void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Change)

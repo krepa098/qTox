@@ -20,6 +20,25 @@
 #include <QMap>
 #include <QStringList>
 #include "module.h"
+#include "helpers.h"
+
+struct ToxGroupInfo
+{
+    int number;
+    int peerCount;
+    QMap<int, QString> peers;
+    ToxPublicKey key;
+
+    bool update();
+};
+
+struct ToxGroup
+{
+    ToxGroup(int groupnumber);
+    bool update(Tox* tox);
+
+    ToxGroupInfo info;
+};
 
 class CoreMessagingModule : public CoreModule {
     Q_OBJECT
@@ -31,20 +50,24 @@ signals:
     void friendMessageReceived(int friendnumber, QString msg);
 
     // group chats
-    void groupInviteReceived(int friendnumber, QByteArray groupPubKey);
+    void groupInviteReceived(int friendnumber, ToxPublicKey groupPubKey);
     void groupMessage(int groupnumber, int friendgroupnumber, QString msg);
     void groupJoined(int groupnumber);
     void groupCreated(int groupnumber);
+    void groupInfoAvailable(ToxGroupInfo info);
+
+    //note: Use these for messages like "xy joined the chat" etc.
+    //      There is absolutely no guarantee that they are fired in the right order
+    //      Use groupInfoAvailable as source of reliable information.
     void groupPeerNameChanged(int groupnumber, int peer, QString name);
     void groupPeerJoined(int groupnumber, int peer, QString name);
-    void groupPeerLeft(int groupnumber, int peer, QString name);
-    void groupPeerNamesUpdated(QStringList peerNames);
+    void groupPeerLeft(int groupnumber, int peer, QString name);  
 
 public slots:
     void sendMessage(int friendnumber, QString msg);
 
     // group chats
-    void acceptGroupInvite(int friendnumber, QByteArray groupPubKey);
+    void acceptGroupInvite(int friendnumber, ToxPublicKey groupPubKey);
     void sendGroupInvite(int friendnumber, int groupnumber);
     void createGroup();
     void removeGroup(int groupnumber);
@@ -58,8 +81,11 @@ private:
     static void callbackGroupNamelistChanged(Tox* tox, int groupnumber, int peer, uint8_t change, void* userdata);
     static void callbackGroupAction(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* action, uint16_t length, void* userdata);
 
+protected:
+    bool inGroup(ToxPublicKey key) const;
+
 private:
-    QMap<QByteArray, int> m_invitedGroups;
+    QMap<int, ToxGroup> m_groups;
 };
 
 #endif // MSGMODULE_H
