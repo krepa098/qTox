@@ -26,7 +26,6 @@
 #include <tox/tox.h>
 
 #define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
-#define CPtr(x) reinterpret_cast<const char*>(x)
 
 /* ====================
  * MAPPING
@@ -356,7 +355,7 @@ void Core::callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* ne
     Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
-    QString name = QString::fromUtf8(reinterpret_cast<const char*>(newname), length);
+    QString name = CoreHelpers::stringFromToxUTF8(newname, length);
     emit core->friendUsernameChanged(friendnumber, name);
 }
 
@@ -366,7 +365,7 @@ void Core::callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint
 
     Core* core = static_cast<Core*>(userdata);
     ToxPublicKey pubkey(public_key);
-    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(data), length);
+    QString msg = CoreHelpers::stringFromToxUTF8(data, length);
     emit core->friendRequestReceived(pubkey, msg);
 }
 
@@ -384,7 +383,7 @@ void Core::callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* 
     Q_UNUSED(tox)
 
     Core* core = static_cast<Core*>(userdata);
-    QString msg = QString::fromUtf8(reinterpret_cast<const char*>(newstatus), length);
+    QString msg = CoreHelpers::stringFromToxUTF8(newstatus, length);
     emit core->friendStatusMessageChanged(friendnumber, msg);
 }
 

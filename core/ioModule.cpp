@@ -15,12 +15,14 @@
 */
 
 #include "ioModule.h"
+#include "helpers.h"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QMutexLocker>
 #include <QDebug>
 #include <tox/tox.h>
+
 
 #define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
 #define CPtr(x) reinterpret_cast<const char*>(x)
@@ -323,8 +325,8 @@ void CoreIOModule::callbackFileSendRequest(Tox* tox, int32_t friendnumber, uint8
 {
     CoreIOModule* module = static_cast<CoreIOModule*>(userdata);
 
-    QByteArray filenameData(CPtr(filename), filename_length);
-    ToxFileTransfer::Ptr trans = ToxFileTransfer::createReceiving(friendnumber, filenumber, QString::fromUtf8(filenameData), filesize);
+    QString file = CoreHelpers::stringFromToxUTF8(filename, filename_length);
+    ToxFileTransfer::Ptr trans = ToxFileTransfer::createReceiving(friendnumber, filenumber, file, filesize);
 
     module->m_fileTransfers.insert(filenumber, trans);
     emit module->fileTransferRequested(trans->getInfo());

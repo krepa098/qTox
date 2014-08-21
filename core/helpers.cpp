@@ -1,3 +1,19 @@
+/*
+    Copyright (C) 2014 by Project Tox <https://tox.im>
+
+    This file is part of qTox, a Qt-based graphical interface for Tox.
+
+    This program is libre software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+    See the COPYING file for more details.
+*/
+
 #include "helpers.h"
 
 #include <QDebug>
@@ -50,7 +66,7 @@ QList<QByteArray> CoreHelpers::sliceUTF8After(const QString& utf8Str, char separ
     return out;
 }
 
-QString CoreHelpers::StringFromToxUTF8(const uint8_t *data, int length)
+QString CoreHelpers::stringFromToxUTF8(const uint8_t *data, int length)
 {
     return QString::fromUtf8(reinterpret_cast<const char*>(data), length);
 }

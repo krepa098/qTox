@@ -164,7 +164,7 @@ bool CoreMessagingModule::inGroup(const ToxPublicKey &key) const
 void CoreMessagingModule::callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata)
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
-    QString msg = CoreHelpers::StringFromToxUTF8(message, length);
+    QString msg = CoreHelpers::stringFromToxUTF8(message, length);
     emit module->friendMessageReceived(friendnumber, msg);
 
     Q_UNUSED(tox)
@@ -183,7 +183,7 @@ void CoreMessagingModule::callbackGroupInvite(Tox* tox, int friendnumber, const 
 void CoreMessagingModule::callbackGroupMessage(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* message, uint16_t length, void* userdata)
 {
     CoreMessagingModule* module = static_cast<CoreMessagingModule*>(userdata);
-    QString msg = CoreHelpers::StringFromToxUTF8(message, length);
+    QString msg = CoreHelpers::stringFromToxUTF8(message, length);
     emit module->groupMessage(groupnumber, friendgroupnumber, msg);
 
     Q_UNUSED(tox)

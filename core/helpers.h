@@ -1,3 +1,19 @@
+/*
+    Copyright (C) 2014 by Project Tox <https://tox.im>
+
+    This file is part of qTox, a Qt-based graphical interface for Tox.
+
+    This program is libre software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+    See the COPYING file for more details.
+*/
+
 #ifndef HELPERS_H
 #define HELPERS_H
 
@@ -6,25 +22,23 @@
 #include <QList>
 #include <QString>
 
-class CoreHelpers
-{
+class CoreHelpers {
 public:
-    static QList<QByteArray> sliceUTF8After(const QString &utf8Str,char separator, int maxBytes);
-    static QString StringFromToxUTF8(const uint8_t* data, int length);
+    static QList<QByteArray> sliceUTF8After(const QString& utf8Str, char separator, int maxBytes);
+    static QString stringFromToxUTF8(const uint8_t* data, int length);
 };
 
-template<int bytes>
-class ToxArray
-{
+template <int bytes>
+class ToxArray {
 public:
-    ToxArray() : m_arr(bytes, char(0))
+    ToxArray()
+        : m_arr(bytes, char(0))
     {
-
     }
 
-    ToxArray(const uint8_t* data) : m_arr(reinterpret_cast<const char*>(data), bytes)
+    ToxArray(const uint8_t* data)
+        : m_arr(reinterpret_cast<const char*>(data), bytes)
     {
-
     }
 
     QString toHex() const
@@ -53,7 +67,7 @@ public:
         return m_arr.size();
     }
 
-    bool operator== (const ToxArray<bytes>& other) const
+    bool operator==(const ToxArray<bytes>& other) const
     {
         return m_arr == other.m_arr;
     }
