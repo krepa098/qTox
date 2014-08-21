@@ -636,7 +636,7 @@ void Widget::onGroupPeerJoined(int groupnumber, int peer, QString name)
         g->addPeer(peer, name);
 }
 
-void Widget::onGroupPeerRemoved(int groupnumber, int peer)
+void Widget::onGroupPeerRemoved(int groupnumber, int peer, QString name)
 {
     Group* g = GroupList::findGroup(groupnumber);
     if (g)

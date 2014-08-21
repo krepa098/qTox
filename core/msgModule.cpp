@@ -15,6 +15,7 @@
 */
 
 #include "msgModule.h"
+#include "helpers.h"
 
 #include <QMutexLocker>
 #include <QDebug>
@@ -42,8 +43,11 @@ void CoreMessagingModule::sendMessage(int friendnumber, QString msg)
 {
     QMutexLocker lock(coreMutex());
 
-    //TODO: split message after TOX_MAX_MESSAGE_LENGTH bytes
-    tox_send_message(tox(), friendnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
+    // TOX_MAX_MESSAGE_LENGTH is a minimum of 342 runes
+    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, TOX_MAX_MESSAGE_LENGTH);
+
+    for (const QByteArray& str : splitMsg)
+        tox_send_message(tox(), friendnumber, reinterpret_cast<const uint8_t*>(str.data()), str.size());
 }
 
 void CoreMessagingModule::acceptGroupInvite(int friendnumber, QByteArray groupPubKey)
@@ -58,7 +62,10 @@ void CoreMessagingModule::acceptGroupInvite(int friendnumber, QByteArray groupPu
 
     int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.data()));
     if (groupnumber >= 0)
+    {
         m_invitedGroups.insert(groupPubKey, groupnumber);
+        emit groupJoined(groupnumber);
+    }
 }
 
 void CoreMessagingModule::sendGroupInvite(int friendnumber, int groupnumber)
@@ -92,7 +99,10 @@ void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
 {
     QMutexLocker lock(coreMutex());
 
-    tox_group_message_send(tox(), groupnumber, U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
+    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, TOX_MAX_MESSAGE_LENGTH);
+
+    for (const QByteArray& str : splitMsg)
+        tox_group_message_send(tox(), groupnumber, reinterpret_cast<const uint8_t*>(str.data()), str.size());
 }
 
 /********************
@@ -134,25 +144,30 @@ void CoreMessagingModule::callbackGroupNamelistChanged(Tox* tox, int groupnumber
     QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
     tox_group_peername(tox, groupnumber, peer, U8Ptr(nameData.data()));
 
+    // === This turned out to be highly unreliable ===
     switch (change) {
     case TOX_CHAT_CHANGE_PEER_ADD:
-        if (peer == 0) {
-            qDebug() << "GroupJoin";
-            emit module->groupJoined(groupnumber);
-        }
-
         emit module->groupPeerJoined(groupnumber, peer, QString::fromUtf8(nameData));
-
         break;
     case TOX_CHAT_CHANGE_PEER_DEL:
-        emit module->groupPeerLeft(groupnumber, peer);
+        emit module->groupPeerLeft(groupnumber, peer, QString::fromUtf8(nameData));
         break;
     case TOX_CHAT_CHANGE_PEER_NAME:
         emit module->groupPeerNameChanged(groupnumber, peer, QString::fromUtf8(nameData));
         break;
     }
 
+    QStringList names;
+    for(int i=0;i<tox_group_number_peers(tox, groupnumber);i++)
+    {
+        QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
+        tox_group_peername(tox, groupnumber, i, U8Ptr(nameData.data()));
+        names.append(QString::fromUtf8(nameData));
+    }
+
+
     qDebug() << "Group " << groupnumber << " Peer " << peer << " name " << QString::fromUtf8(nameData) << " change " << change;
+    qDebug() << names;
 }
 
 void CoreMessagingModule::callbackGroupAction(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* action, uint16_t length, void* userdata)

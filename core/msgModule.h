@@ -18,6 +18,7 @@
 #define MSGMODULE_H
 
 #include <QMap>
+#include <QStringList>
 #include "module.h"
 
 class CoreMessagingModule : public CoreModule {
@@ -36,7 +37,8 @@ signals:
     void groupCreated(int groupnumber);
     void groupPeerNameChanged(int groupnumber, int peer, QString name);
     void groupPeerJoined(int groupnumber, int peer, QString name);
-    void groupPeerLeft(int groupnumber, int peer);
+    void groupPeerLeft(int groupnumber, int peer, QString name);
+    void groupPeerNamesUpdated(QStringList peerNames);
 
 public slots:
     void sendMessage(int friendnumber, QString msg);
