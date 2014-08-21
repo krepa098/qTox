@@ -45,14 +45,12 @@ bool ToxGroup::update(Tox* tox)
     }
 
     // query names
-    for(int i=0;i<peerCount;++i)
-    {
+    for (int i = 0; i < peerCount; ++i) {
         QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
         tox_group_peername(tox, info.number, i, U8Ptr(nameData.data()));
 
         QString name = QString::fromUtf8(nameData);
-        if (info.peers[i] != name)
-        {
+        if (info.peers[i] != name) {
             info.peers[i] = name;
             updated = true;
         }
@@ -79,8 +77,7 @@ CoreMessagingModule::CoreMessagingModule(QObject* parent, Tox* tox, QMutex* mute
 void CoreMessagingModule::update()
 {
     // update group info
-    for(ToxGroup& group : m_groups)
-    {
+    for (ToxGroup& group : m_groups) {
         if (group.update(tox()))
             emit groupInfoAvailable(group.info);
     }
@@ -108,8 +105,7 @@ void CoreMessagingModule::acceptGroupInvite(int friendnumber, ToxPublicKey group
         return; // already into that group
 
     int groupnumber = tox_join_groupchat(tox(), friendnumber, U8Ptr(groupPubKey.data()));
-    if (groupnumber >= 0)
-    {
+    if (groupnumber >= 0) {
         m_groups.insert(groupnumber, ToxGroup(groupnumber));
         emit groupJoined(groupnumber);
     }
@@ -153,8 +149,7 @@ void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
 
 bool CoreMessagingModule::inGroup(ToxPublicKey key) const
 {
-    for(const ToxGroup& group : m_groups)
-    {
+    for (const ToxGroup& group : m_groups) {
         if (group.info.key == key)
             return true;
     }
@@ -213,17 +208,6 @@ void CoreMessagingModule::callbackGroupNamelistChanged(Tox* tox, int groupnumber
         emit module->groupPeerNameChanged(groupnumber, peer, QString::fromUtf8(nameData));
         break;
     }
-
-    QStringList names;
-    for(int i=0;i<tox_group_number_peers(tox, groupnumber);i++)
-    {
-        QByteArray nameData(TOX_MAX_NAME_LENGTH, char(0));
-        tox_group_peername(tox, groupnumber, i, U8Ptr(nameData.data()));
-        names.append(QString::fromUtf8(nameData));
-    }
-
-    qDebug() << "Group " << groupnumber << " Peer " << peer << " name " << QString::fromUtf8(nameData) << " change " << change;
-    qDebug() << names;
 }
 
 void CoreMessagingModule::callbackGroupAction(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* action, uint16_t length, void* userdata)

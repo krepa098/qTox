@@ -22,8 +22,7 @@
 #include "module.h"
 #include "helpers.h"
 
-struct ToxGroupInfo
-{
+struct ToxGroupInfo {
     int number;
     int peerCount;
     QMap<int, QString> peers;
@@ -32,8 +31,7 @@ struct ToxGroupInfo
     bool update();
 };
 
-struct ToxGroup
-{
+struct ToxGroup {
     ToxGroup(int groupnumber);
     bool update(Tox* tox);
 
@@ -61,7 +59,7 @@ signals:
     //      Use groupInfoAvailable as source of reliable information.
     void groupPeerNameChanged(int groupnumber, int peer, QString name);
     void groupPeerJoined(int groupnumber, int peer, QString name);
-    void groupPeerLeft(int groupnumber, int peer, QString name);  
+    void groupPeerLeft(int groupnumber, int peer, QString name);
 
 public slots:
     void sendMessage(int friendnumber, QString msg);
