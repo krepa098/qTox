@@ -44,7 +44,7 @@ void CoreMessagingModule::sendMessage(int friendnumber, QString msg)
     QMutexLocker lock(coreMutex());
 
     // TOX_MAX_MESSAGE_LENGTH is a minimum of 342 runes
-    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, TOX_MAX_MESSAGE_LENGTH);
+    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, ' ', TOX_MAX_MESSAGE_LENGTH);
 
     for (const QByteArray& str : splitMsg)
         tox_send_message(tox(), friendnumber, reinterpret_cast<const uint8_t*>(str.data()), str.size());
@@ -99,7 +99,7 @@ void CoreMessagingModule::sendGroupMessage(int groupnumber, QString msg)
 {
     QMutexLocker lock(coreMutex());
 
-    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, TOX_MAX_MESSAGE_LENGTH);
+    QList<QByteArray> splitMsg = CoreHelpers::sliceUTF8After(msg, ' ', TOX_MAX_MESSAGE_LENGTH);
 
     for (const QByteArray& str : splitMsg)
         tox_group_message_send(tox(), groupnumber, reinterpret_cast<const uint8_t*>(str.data()), str.size());

@@ -2,40 +2,50 @@
 #include <QString>
 #include <QDebug>
 
-QList<QByteArray> CoreHelpers::sliceUTF8After(const QString &utf8Str, int bytes)
+QList<QByteArray> CoreHelpers::sliceUTF8After(const QString& utf8Str, char separator, int maxBytes)
 {
     QByteArray utf8 = utf8Str.toUtf8();
     QList<QByteArray> out;
-    int latestStartByte = 0;
-    int currStartByte = 0;
-    bytes -= 4; // padding
+    int latestRune = 0;
+    int latestSeperator = -1; // -1: not found
+    int offset = 0; // a utf8 start byte or ASCII char
+    maxBytes -= 4; // padding
 
-    for (int i=0;i<utf8.size();++i)
-    {
+    int i = 0;
+    while (i < utf8.size()) {
         // is utf8 start byte?
-        if (utf8[i] & 0xC0 /* 11000000b */)
-        {
-            latestStartByte = i;
+        if ((utf8[i] & 0xC0) == 0xC0 /* 1100 0000b */) {
+            latestRune = i - offset;
+        } else if ((utf8[i] & 0x80 /* 1000 0000b */) == 0) { // is ASCII?
+            latestRune = i - offset;
 
-            //figure out how many bytes to skip till the next start byte
-            if (utf8[i] & 0xF0 /* 11110000b */) // skip 4 bytes
-                i += 3;
-            else if (utf8[i] & 0xE0 /* 11100000b */) // skip 3 bytes
-                i += 2;
-            else if (utf8[i] & 0xD0 /* 11000000b */) // skip 2 bytes
-                i += 1;
+            // is separator?
+            if (utf8[i] == separator /*ASCII*/)
+                latestSeperator = i - offset;
         }
 
-        if (i - currStartByte >= bytes)
-        {
+        if (i - offset >= maxBytes) {
             // we have reached the maximum size in bytes
-            out.append(utf8.mid(currStartByte, latestStartByte - currStartByte));
-            currStartByte = latestStartByte;
+            // so slice it!
+            if (latestSeperator > 0) {
+                // slice after the seperator
+                out.append(utf8.mid(offset, latestSeperator + 1));
+                offset += latestSeperator + 1;
+            } else {
+                // no separator found
+                // slice before the latest utf8 start byte
+                out.append(utf8.mid(offset, latestRune));
+                offset += latestRune;
+            }
+
+            latestSeperator = -1;
         }
+
+        i++;
     }
 
     // add the remaining bits
-    out.append(utf8.mid(currStartByte, utf8.size() - currStartByte));
+    out.append(utf8.mid(offset, utf8.size() - offset));
 
     return out;
 }
