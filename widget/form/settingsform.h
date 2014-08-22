@@ -40,9 +40,6 @@ public:
 
     void show(Ui::MainWindow &ui);
 
-public slots:
-    void onUserIdChanged(QString userid);
-
 private slots:
     void onTestVideoClicked();
     void onEnableIPv6Updated();

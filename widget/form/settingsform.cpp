@@ -43,6 +43,7 @@ SettingsForm::SettingsForm()
     id.setFrameStyle(QFrame::NoFrame);
     id.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     id.setFixedHeight(id.document()->size().height());
+    id.setText(Widget::getInstance()->getCore()->msgModule()->getUserAddress().toHex());
 
     videoTest.setText(tr("Test video","Text on a button to test the video/webcam"));
     enableIPv6.setText(tr("Enable IPv6 (recommended)","Text on a checkbox to enable IPv6"));
@@ -112,11 +113,6 @@ void SettingsForm::copyIdClicked()
 {
     id.selectAll();;
     QApplication::clipboard()->setText(id.toPlainText());
-}
-
-void SettingsForm::onUserIdChanged(QString userid)
-{
-    id.setText(userid);
 }
 
 void SettingsForm::onUseTranslationUpdated()

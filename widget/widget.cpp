@@ -180,46 +180,45 @@ Widget::Widget(QWidget *parent)
     connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
     connect(coreThread, &QThread::started, core, &Core::start);
 
-    connect(core, &Core::usernameChanged, this, &Widget::setUsername);
+    connect(core->msgModule(), &CoreMessengerModule::usernameChanged, this, &Widget::setUsername);
     //    connect(core, &Core::connected, this, &Widget::onConnected);
     //    connect(core, &Core::disconnected, this, &Widget::onDisconnected);
     //    connect(core, &Core::failedToStart, this, &Widget::onFailedToStartCore);
-    connect(core, &Core::statusChanged, this, &Widget::onStatusSet);
+    connect(core->msgModule(), &CoreMessengerModule::statusChanged, this, &Widget::onStatusSet);
     //    connect(core, &Core::usernameSet, this, &Widget::setUsername);
-    connect(core, &Core::userStatusMessageChanged, this, &Widget::setStatusMessage);
+    connect(core->msgModule(), &CoreMessengerModule::userStatusMessageChanged, this, &Widget::setStatusMessage);
     //    connect(core, &Core::friendAddressGenerated, &settingsForm, &SettingsForm::setFriendAddress);
     //    connect(core, SIGNAL(fileDownloadFinished(const QString&)), &filesForm, SLOT(onFileDownloadComplete(const QString&)));
     //    connect(core, SIGNAL(fileUploadFinished(const QString&)), &filesForm, SLOT(onFileUploadComplete(const QString&)));
-    connect(core, &Core::friendAdded, this, &Widget::addFriend);
+    connect(core->msgModule(), &CoreMessengerModule::friendAdded, this, &Widget::addFriend);
     //    connect(core, &Core::failedToAddFriend, this, &Widget::addFriendFailed);
-    connect(core, &Core::friendStatusChanged, this, &Widget::onFriendStatusChanged);
-    connect(core, &Core::friendUsernameChanged, this, &Widget::onFriendUsernameChanged);
-    connect(core, &Core::friendStatusMessageChanged, this, &Widget::onFriendStatusMessageChanged);
+    connect(core->msgModule(), &CoreMessengerModule::friendStatusChanged, this, &Widget::onFriendStatusChanged);
+    connect(core->msgModule(), &CoreMessengerModule::friendUsernameChanged, this, &Widget::onFriendUsernameChanged);
+    connect(core->msgModule(), &CoreMessengerModule::friendStatusMessageChanged, this, &Widget::onFriendStatusMessageChanged);
     //    connect(core, &Core::friendUsernameLoaded, this, &Widget::onFriendUsernameLoaded);
     //    connect(core, &Core::friendStatusMessageLoaded, this, &Widget::onFriendStatusMessageLoaded);
-    connect(core->msgModule(), &CoreMessagingModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
+    connect(core->msgModule(), &CoreMessengerModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
 
     // groups
-    connect(core->msgModule(), &CoreMessagingModule::groupCreated, this, &Widget::onEmptyGroupCreated);
-    connect(core->msgModule(), &CoreMessagingModule::groupInviteReceived, this, &Widget::onGroupInviteReceived);
-    connect(core->msgModule(), &CoreMessagingModule::groupJoined, this, &Widget::onGroupJoined);
-    connect(core->msgModule(), &CoreMessagingModule::groupMessage, this, &Widget::onGroupMessageReceived);
-    connect(core->msgModule(), &CoreMessagingModule::groupInfoAvailable, this, &Widget::onGroupInfoAvailable);
+    connect(core->msgModule(), &CoreMessengerModule::groupCreated, this, &Widget::onEmptyGroupCreated);
+    connect(core->msgModule(), &CoreMessengerModule::groupInviteReceived, this, &Widget::onGroupInviteReceived);
+    connect(core->msgModule(), &CoreMessengerModule::groupJoined, this, &Widget::onGroupJoined);
+    connect(core->msgModule(), &CoreMessengerModule::groupMessage, this, &Widget::onGroupMessageReceived);
+    connect(core->msgModule(), &CoreMessengerModule::groupInfoAvailable, this, &Widget::onGroupInfoAvailable);
     // group peers
-    connect(core->msgModule(), &CoreMessagingModule::groupPeerJoined, this, &Widget::onGroupPeerJoined);
-    connect(core->msgModule(), &CoreMessagingModule::groupPeerLeft, this, &Widget::onGroupPeerRemoved);
-    connect(core->msgModule(), &CoreMessagingModule::groupPeerNameChanged, this, &Widget::onGroupPeerNameChanged);
+    connect(core->msgModule(), &CoreMessengerModule::groupPeerJoined, this, &Widget::onGroupPeerJoined);
+    connect(core->msgModule(), &CoreMessengerModule::groupPeerLeft, this, &Widget::onGroupPeerRemoved);
+    connect(core->msgModule(), &CoreMessengerModule::groupPeerNameChanged, this, &Widget::onGroupPeerNameChanged);
 
     // friend requests
-    connect(&friendForm, &AddFriendForm::friendRequested, core, &Core::sendFriendRequest);
-    connect(this, &Widget::friendRequestAccepted, core, &Core::acceptFriendRequest);
-    connect(core, &Core::friendRequestReceived, this, &Widget::onFriendRequestReceived);
+    connect(&friendForm, &AddFriendForm::friendRequested, core->msgModule(), &CoreMessengerModule::sendFriendRequest);
+    connect(this, &Widget::friendRequestAccepted, core->msgModule(), &CoreMessengerModule::acceptFriendRequest);
+    connect(core->msgModule(), &CoreMessengerModule::friendRequestReceived, this, &Widget::onFriendRequestReceived);
 
     // status changes
-    connect(this, &Widget::statusSet, core, &Core::setUserStatus);
-    connect(this, &Widget::statusMessageChanged, core, &Core::setUserStatusMessage);
+    connect(this, &Widget::statusSet, core->msgModule(), &CoreMessengerModule::setUserStatus);
+    connect(this, &Widget::statusMessageChanged, core->msgModule(), &CoreMessengerModule::setUserStatusMessage);
 
-    connect(core, &Core::userIdChanged, &settingsForm, &SettingsForm::onUserIdChanged);
     connect(&settingsForm.statusText, SIGNAL(editingFinished()), this, SLOT(onStatusMessageChanged()));
 
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(onAddClicked()));
@@ -397,7 +396,7 @@ void Widget::hideMainForms()
 
 void Widget::onUsernameChanged(const QString& newUsername, const QString& oldUsername)
 {
-    core->setUsername(newUsername);
+    core->msgModule()->setUsername(newUsername);
 }
 
 void Widget::setUsername(const QString& username)
@@ -413,7 +412,7 @@ void Widget::onStatusMessageChanged()
     ui->statusLabel->setText(newStatusMessage);
     ui->statusLabel->setToolTip(newStatusMessage); // for overlength messsages
     settingsForm.statusText.setText(newStatusMessage);
-    core->setUserStatusMessage(newStatusMessage);
+    core->msgModule()->setUserStatusMessage(newStatusMessage);
 }
 
 void Widget::onStatusMessageChanged(const QString& newStatusMessage, const QString& oldStatusMessage)
@@ -442,7 +441,7 @@ void Widget::addFriend(int friendId, const QString &userId)
     connect(newfriend->widget, &FriendWidget::friendWidgetClicked, this, &Widget::onFriendWidgetClicked);
     connect(newfriend->widget, &FriendWidget::removeFriend, this, &Widget::removeFriend);
     connect(newfriend->widget, &FriendWidget::copyFriendIdToClipboard, this, &Widget::copyFriendIdToClipboard);
-    connect(newfriend->chatForm, &ChatForm::sendMessage, core->msgModule(), &CoreMessagingModule::sendMessage);
+    connect(newfriend->chatForm, &ChatForm::sendMessage, core->msgModule(), &CoreMessengerModule::sendMessage);
 
     connect(newfriend->chatForm, &ChatForm::sendFile, core->ioModule(), &CoreIOModule::sendFile);
 
@@ -609,7 +608,7 @@ void Widget::removeFriend(int friendId)
     if (f->widget == activeFriendWidget)
         activeFriendWidget = nullptr;
     FriendList::removeFriend(friendId);
-    core->removeFriend(friendId);
+    core->msgModule()->removeFriend(friendId);
     delete f;
     if (ui->mainHead->layout()->isEmpty())
         onAddClicked();
@@ -661,7 +660,7 @@ void Widget::onGroupMessageReceived(int groupnumber, int friendgroupnumber, cons
 
     if ((isGroupWidgetActive != 1 || (activeGroupWidget && g->groupId != activeGroupWidget->groupId)) || isWindowMinimized || !isActiveWindow())
     {
-        if (message.contains(core->getUsername(), Qt::CaseInsensitive))
+        if (message.contains(core->msgModule()->getUsername(), Qt::CaseInsensitive))
         {
             newMessageAlert();
             g->hasNewMessages = 1;
@@ -780,7 +779,7 @@ Group *Widget::createGroup(int groupId)
     connect(newgroup->widget, SIGNAL(groupWidgetClicked(GroupWidget*)), this, SLOT(onGroupWidgetClicked(GroupWidget*)));
     connect(newgroup->widget, SIGNAL(removeGroup(int)), this, SLOT(removeGroup(int)));
 
-    connect(newgroup->chatForm, &GroupChatForm::sendMessage, core->msgModule(), &CoreMessagingModule::sendGroupMessage);
+    connect(newgroup->chatForm, &GroupChatForm::sendMessage, core->msgModule(), &CoreMessengerModule::sendGroupMessage);
 
     return newgroup;
 }
@@ -1187,17 +1186,17 @@ void Widget::minimizeBtnClicked()
 
 void Widget::setStatusOnline()
 {
-    core->setUserStatus(Status::Online);
+    core->msgModule()->setUserStatus(Status::Online);
 }
 
 void Widget::setStatusAway()
 {
-    core->setUserStatus(Status::Away);
+    core->msgModule()->setUserStatus(Status::Away);
 }
 
 void Widget::setStatusBusy()
 {
-    core->setUserStatus(Status::Busy);
+    core->msgModule()->setUserStatus(Status::Busy);
 }
 
 bool Widget::eventFilter(QObject *, QEvent *event)

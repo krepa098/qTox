@@ -167,6 +167,11 @@ void CoreIOModule::update()
     }
 }
 
+void CoreIOModule::start()
+{
+
+}
+
 void CoreIOModule::sendFile(int friendnumber, QString filePath)
 {
     QMutexLocker lock(coreMutex());

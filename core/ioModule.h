@@ -127,6 +127,7 @@ class CoreIOModule : public CoreModule
 public:
     CoreIOModule(QObject* parent, Tox* tox, QMutex* mutex);
     void update();
+    void start();
 
 signals:
     void fileTransferRequested(ToxFileTransferInfo info);

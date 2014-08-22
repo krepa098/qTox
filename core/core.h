@@ -31,16 +31,6 @@
 
 struct Tox;
 
-enum class Status : int
-{
-    Online = 0,
-    Away,
-    Busy,
-    Offline
-};
-
-Q_DECLARE_METATYPE(Status)
-
 struct ToxDhtServer
 {
     QString address;
@@ -56,44 +46,18 @@ public:
     ~Core();
 
     static void registerMetaTypes();
-    static int getNameMaxLength();
-
-    QString getUsername();
-    void setUsername(const QString& username);
-    ToxAddress getAddress();
 
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
 
     CoreIOModule* ioModule();
-    CoreMessagingModule* msgModule();
+    CoreMessengerModule* msgModule();
 
 signals:
-    // user
-    void userIdChanged(QString userId);
-    void usernameChanged(QString username);
-    void userStatusMessageChanged(QString msg);
-    void statusChanged(Status status);
-
-    // friends
-    void friendAdded(int friendnumber, QString username);
-    void friendStatusChanged(int friendnumber, Status status);
-    void friendStatusMessageChanged(int friendnumber, QString msg);
-    void friendUsernameChanged(int friendnumber, QString newName);
-    void friendRequestReceived(ToxPublicKey publicKey, QString msg);
 
 public slots:
     void start();
     void deleteLater();
-
-    // user
-    void setUserStatusMessage(QString msg);
-    void setUserStatus(Status newStatus);
-
-    // friends
-    void acceptFriendRequest(ToxPublicKey friendAddress);
-    void sendFriendRequest(ToxAddress address, QString msg);
-    void removeFriend(int friendnumber);
 
 private slots:
     void onTimeout();
@@ -101,38 +65,22 @@ private slots:
 protected:
     // tox wrappers
     void initCore();
-    void setupCallbacks();
     void kill();
     void toxDo();
-    void queryFriends();
     void bootstrap();
     bool isConnected();
-    void queryUserId();
-    void queryUserStatusMessage();
-
-    void changeStatus(Status newStatus);
 
 private:
-    // callbacks -- userdata is always a pointer to an instance of Core
-    static void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata);
-    static void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata);
-    static void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata);
-    static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
-    static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
-    static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t info, void* userdata);
+    Tox* m_tox;
 
-private:
-    Tox* tox;
+    QTimer m_ticker;
 
-    QTimer ticker;
-
-    Status info;
-    bool ipV6Enabled;
-    QVector<ToxDhtServer> bootstrapServers;
+    bool m_ipV6Enabled;
+    QVector<ToxDhtServer> m_bootstrapServers;
 
     CoreIOModule* m_ioModule;
-    CoreMessagingModule* m_msgModule;
-    QMutex mutex;
+    CoreMessengerModule* m_msgModule;
+    QMutex m_mutex;
 };
 
 #endif // CORE_H

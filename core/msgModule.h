@@ -22,6 +22,16 @@
 #include "module.h"
 #include "helpers.h"
 
+enum class Status : int
+{
+    Online = 0,
+    Away,
+    Busy,
+    Offline
+};
+
+Q_DECLARE_METATYPE(Status)
+
 struct ToxGroupInfo {
     int number;
     int peerCount;
@@ -36,13 +46,31 @@ struct ToxGroup {
     ToxGroupInfo info;
 };
 
-class CoreMessagingModule : public CoreModule {
+class CoreMessengerModule : public CoreModule {
     Q_OBJECT
 public:
-    CoreMessagingModule(QObject* parent, Tox* tox, QMutex* mutex);
+    CoreMessengerModule(QObject* parent, Tox* tox, QMutex* mutex);
     void update();
+    void start();
+
+    static int getNameMaxLength();
+
+    QString getUsername();
+    void setUsername(const QString& username);
+    ToxAddress getUserAddress();
 
 signals:
+    // user
+    void usernameChanged(QString username);
+    void userStatusMessageChanged(QString msg);
+    void statusChanged(Status status);
+
+    // friends
+    void friendAdded(int friendnumber, QString username);
+    void friendStatusChanged(int friendnumber, Status status);
+    void friendStatusMessageChanged(int friendnumber, QString msg);
+    void friendUsernameChanged(int friendnumber, QString newName);
+    void friendRequestReceived(ToxPublicKey publicKey, QString msg);
     void friendMessageReceived(int friendnumber, QString msg);
 
     // group chats
@@ -60,6 +88,14 @@ signals:
     void groupPeerLeft(int groupnumber, int peer, QString name);
 
 public slots:
+    // user
+    void setUserStatusMessage(QString msg);
+    void setUserStatus(Status newStatus);
+
+    // friends
+    void acceptFriendRequest(ToxPublicKey friendAddress);
+    void sendFriendRequest(ToxAddress address, QString msg);
+    void removeFriend(int friendnumber);
     void sendMessage(int friendnumber, QString msg);
 
     // group chats
@@ -71,6 +107,13 @@ public slots:
 
 private:
     // callbacks -- userdata is always a pointer to an instance of this class
+    static void callbackNameChanged(Tox* tox, int32_t friendnumber, const uint8_t* newname, uint16_t length, void* userdata);
+    static void callbackFriendRequest(Tox* tox, const uint8_t* public_key, const uint8_t* data, uint16_t length, void* userdata);
+    static void callbackFriendAction(Tox* tox, int32_t friendnumber, const uint8_t* action, uint16_t length, void* userdata);
+    static void callbackStatusMessage(Tox* tox, int32_t friendnumber, const uint8_t* newstatus, uint16_t length, void* userdata);
+    static void callbackUserStatus(Tox* tox, int32_t friendnumber, uint8_t TOX_USERSTATUS, void* userdata);
+    static void callbackConnectionStatus(Tox* tox, int32_t friendnumber, uint8_t info, void* userdata);
+
     static void callbackFriendMessage(Tox* tox, int32_t friendnumber, const uint8_t* message, uint16_t length, void* userdata);
     static void callbackGroupInvite(Tox* tox, int friendnumber, const uint8_t* group_public_key, void* userdata);
     static void callbackGroupMessage(Tox* tox, int groupnumber, int friendgroupnumber, const uint8_t* message, uint16_t length, void* userdata);
@@ -79,9 +122,14 @@ private:
 
 protected:
     bool inGroup(const ToxPublicKey& key) const;
+    void emitFriends();
+    void emitUserStatusMessage();
+
+    void changeStatus(Status newStatus);
 
 private:
     QMap<int, ToxGroup> m_groups;
+    Status m_oldStatus;
 };
 
 #endif // MSGMODULE_H

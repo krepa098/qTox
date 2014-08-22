@@ -43,6 +43,7 @@ public:
     }
 
     virtual void update() = 0;
+    virtual void start() = 0;
 
 private:
     Tox* m_tox;
