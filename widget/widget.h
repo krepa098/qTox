@@ -84,7 +84,7 @@ private slots:
     void onFailedToStartCore();
     void onUsernameChanged(const QString& newUsername, const QString& oldUsername);
     void onStatusMessageChanged(const QString& newStatusMessage, const QString& oldStatusMessage);
-    //void onUsernameChanged();
+    void onConnectionStatusChanged(bool connected);
     void onStatusMessageChanged();
     void setUsername(const QString& username);
     void setStatusMessage(const QString &statusMessage);
@@ -106,7 +106,6 @@ private slots:
     void onGroupPeerNameChanged(int groupnumber, int peer, QString name);
     void onGroupMessageReceived(int groupnumber, int friendgroupnumber, const QString& message);
     void onGroupInfoAvailable(ToxGroupInfo info);
-    void onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t change);
     void onGroupWidgetClicked(GroupWidget* widget);
     void onGroupJoined(int groupnumber);
 

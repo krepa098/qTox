@@ -55,9 +55,11 @@ public:
 
     static int getNameMaxLength();
 
-    QString getUsername();
-    void setUsername(const QString& username);
     ToxAddress getUserAddress();
+    QString getUsername();
+    Status getUserStatus();
+
+    void setUsername(const QString& username);
 
 signals:
     // user

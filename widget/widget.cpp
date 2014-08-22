@@ -157,33 +157,18 @@ Widget::Widget(QWidget *parent)
     camera = new Camera;
     camview = new SelfCamView(camera);
 
-    Core::registerMetaTypes();
-
     coreThread = new QThread();
-    core = new Core(Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
+    core = new Core(coreThread, Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
     core->loadConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
-    core->moveToThread(coreThread);
-    connect(coreThread, &QThread::finished, core, &Core::deleteLater);
-    connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
-    connect(coreThread, &QThread::started, core, &Core::start);
 
+    connect(core, &Core::connectionStatusChanged, this, &Widget::onConnectionStatusChanged);
     connect(core->msgModule(), &CoreMessengerModule::usernameChanged, this, &Widget::setUsername);
-    //    connect(core, &Core::connected, this, &Widget::onConnected);
-    //    connect(core, &Core::disconnected, this, &Widget::onDisconnected);
-    //    connect(core, &Core::failedToStart, this, &Widget::onFailedToStartCore);
     connect(core->msgModule(), &CoreMessengerModule::statusChanged, this, &Widget::onStatusSet);
-    //    connect(core, &Core::usernameSet, this, &Widget::setUsername);
     connect(core->msgModule(), &CoreMessengerModule::userStatusMessageChanged, this, &Widget::setStatusMessage);
-    //    connect(core, &Core::friendAddressGenerated, &settingsForm, &SettingsForm::setFriendAddress);
-    //    connect(core, SIGNAL(fileDownloadFinished(const QString&)), &filesForm, SLOT(onFileDownloadComplete(const QString&)));
-    //    connect(core, SIGNAL(fileUploadFinished(const QString&)), &filesForm, SLOT(onFileUploadComplete(const QString&)));
     connect(core->msgModule(), &CoreMessengerModule::friendAdded, this, &Widget::addFriend);
-    //    connect(core, &Core::failedToAddFriend, this, &Widget::addFriendFailed);
     connect(core->msgModule(), &CoreMessengerModule::friendStatusChanged, this, &Widget::onFriendStatusChanged);
     connect(core->msgModule(), &CoreMessengerModule::friendUsernameChanged, this, &Widget::onFriendUsernameChanged);
     connect(core->msgModule(), &CoreMessengerModule::friendStatusMessageChanged, this, &Widget::onFriendStatusMessageChanged);
-    //    connect(core, &Core::friendUsernameLoaded, this, &Widget::onFriendUsernameLoaded);
-    //    connect(core, &Core::friendStatusMessageLoaded, this, &Widget::onFriendStatusMessageLoaded);
     connect(core->msgModule(), &CoreMessengerModule::friendMessageReceived, this, &Widget::onFriendMessageReceived);
 
     // groups
@@ -213,14 +198,14 @@ Widget::Widget(QWidget *parent)
     connect(ui->transferButton, SIGNAL(clicked()), this, SLOT(onTransferClicked()));
     connect(ui->settingsButton, SIGNAL(clicked()), this, SLOT(onSettingsClicked()));
     connect(ui->nameLabel, &EditableLabelWidget::textChanged, this, &Widget::onUsernameChanged);
+    //connect(&settingsForm.name, &QLineEdit::editingFinished, this, &Widget::onUsernameChanged);
     connect(ui->statusLabel, SIGNAL(textChanged(QString,QString)), this, SLOT(onStatusMessageChanged(QString,QString)));
 
     connect(setStatusOnline, SIGNAL(triggered()), this, SLOT(setStatusOnline()));
     connect(setStatusAway, SIGNAL(triggered()), this, SLOT(setStatusAway()));
     connect(setStatusBusy, SIGNAL(triggered()), this, SLOT(setStatusBusy()));
 
-    //connect(&settingsForm.name, SIGNAL(editingFinished()), this, SLOT(onUsernameChanged()));
-
+    //start core
     coreThread->start();
 
     friendForm.show(*ui);
@@ -372,17 +357,12 @@ void Widget::hideMainForms()
     }
 }
 
-//void Widget::onUsernameChanged()
-//{
-////    const QString newUsername = settingsForm.name.text();
-////    ui->nameLabel->setText(newUsername);
-////    ui->nameLabel->setToolTip(newUsername); // for overlength names
-////    settingsForm.name.setText(newUsername);
-//    //core->setUsername(newUsername);
-//}
-
 void Widget::onUsernameChanged(const QString& newUsername, const QString& oldUsername)
 {
+    ui->nameLabel->setText(oldUsername);
+    ui->nameLabel->setToolTip(oldUsername);
+    settingsForm.name.setText(oldUsername);
+
     core->msgModule()->setUsername(newUsername);
 }
 
@@ -407,7 +387,12 @@ void Widget::onStatusMessageChanged(const QString& newStatusMessage, const QStri
     ui->statusLabel->setText(oldStatusMessage); // restore old status message until Core tells us to set it
     ui->statusLabel->setToolTip(oldStatusMessage); // for overlength messsages
     settingsForm.statusText.setText(oldStatusMessage);
-    //core->setStatusMessage(newStatusMessage);
+    core->msgModule()->setUserStatusMessage(newStatusMessage);
+}
+
+void Widget::onConnectionStatusChanged(bool connected)
+{
+    onStatusSet(connected ? core->msgModule()->getUserStatus() : Status::Offline);
 }
 
 void Widget::setStatusMessage(const QString &statusMessage)
@@ -674,24 +659,6 @@ void Widget::onGroupInfoAvailable(ToxGroupInfo info)
     Group* g = GroupList::findGroup(info.number);
     if (g)
         g->updatePeers(info.peers);
-}
-
-void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Change)
-{
-    //    Group* g = GroupList::findGroup(groupnumber);
-    //    if (!g)
-    //    {
-    //        qDebug() << "Widget::onGroupNamelistChanged: Group not found, creating it";
-    //        g = createGroup(groupnumber);
-    //    }
-
-    //    TOX_CHAT_CHANGE change = static_cast<TOX_CHAT_CHANGE>(Change);
-    //    if (change == TOX_CHAT_CHANGE_PEER_ADD)
-    //        g->addPeer(peernumber,"<Unknown>");
-    //    else if (change == TOX_CHAT_CHANGE_PEER_DEL)
-    //        g->removePeer(peernumber);
-    //    else if (change == TOX_CHAT_CHANGE_PEER_NAME)
-    //        g->updatePeer(peernumber,core->getGroupPeerName(groupnumber, peernumber));
 }
 
 void Widget::onGroupWidgetClicked(GroupWidget* widget)

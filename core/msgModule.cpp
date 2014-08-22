@@ -85,7 +85,7 @@ bool ToxGroup::update(Tox* tox)
 
 CoreMessengerModule::CoreMessengerModule(QObject* parent, Tox* tox, QMutex* mutex)
     : CoreModule(parent, tox, mutex),
-      m_oldStatus(Status::Offline)
+      m_oldStatus(Status::Online)
 {
     // setup callbacks
     tox_callback_friend_request(tox, callbackFriendRequest, this);
@@ -175,6 +175,11 @@ QString CoreMessengerModule::getUsername()
     return "nil";
 }
 
+Status CoreMessengerModule::getUserStatus()
+{
+    return mapStatus(tox_get_self_user_status(tox()));
+}
+
 void CoreMessengerModule::setUsername(const QString& username)
 {
     QMutexLocker lock(coreMutex());
@@ -240,9 +245,11 @@ void CoreMessengerModule::setUserStatusMessage(QString msg)
 {
     QMutexLocker lock(coreMutex());
 
-    tox_set_status_message(tox(), U8Ptr(msg.toUtf8().data()), msg.toUtf8().size());
-
-    qDebug() << "tox_set_status_message" << msg;
+    if (tox_set_status_message(tox(), U8Ptr(msg.toUtf8().data()), msg.toUtf8().size()) == 0)
+    {
+        emit userStatusMessageChanged(msg);
+        qDebug() << "tox_set_status_message" << msg;
+    }
 }
 
 void CoreMessengerModule::setUserStatus(Status newStatus)

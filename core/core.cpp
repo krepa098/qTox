@@ -33,36 +33,48 @@
  * CORE
  * ====================*/
 
-Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
-    : QObject(nullptr)
+Core::Core(QThread *coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
+    : QObject(nullptr) // Core must not be a child of coreThread
     , m_tox(nullptr)
+    , m_lastConnStatus(false)
     , m_ipV6Enabled(enableIPv6)
     , m_dhtServers(dhtServers)
     , m_ioModule(nullptr)
     , m_msgModule(nullptr)
     , m_mutex(QMutex::Recursive)
 {
+    // register metatypes
+    static bool metaTypesRegistered = false;
+    if(!metaTypesRegistered)
+    {
+        metaTypesRegistered = true;
+        qRegisterMetaType<ToxFileTransferInfo>();
+    }
+
+    // connect to thread
+    moveToThread(coreThread);
+    connect(coreThread, &QThread::finished, this, &Core::deleteLater);
+    connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
+    connect(coreThread, &QThread::started, this, &Core::start);
+
     // randomize the dht server
     srand(QDateTime::currentDateTime().toTime_t());
     std::random_shuffle(m_dhtServers.begin(),m_dhtServers.end());
 
+    // start tox
     initCore();
 
+    // modules
     m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
     m_msgModule = new CoreMessengerModule(this, m_tox, &m_mutex);
 }
 
 Core::~Core()
 {
-    kill();
-}
+    QMutexLocker lock(&m_mutex);
 
-void Core::registerMetaTypes()
-{
-    qRegisterMetaType<Status>();
-    qRegisterMetaType<ToxFileTransferInfo>();
-    qRegisterMetaType<ToxPublicKey>();
-    qRegisterMetaType<ToxAddress>();
+    tox_kill(m_tox);
+    qDebug() << "tox_kill";
 }
 
 void Core::start()
@@ -79,18 +91,26 @@ void Core::start()
     bootstrap();
 }
 
-void Core::deleteLater()
-{
-    qDebug() << "Delete later";
-}
-
 void Core::onTimeout()
 {
-    m_ticker.setInterval(qMax(1, int(tox_do_interval(m_tox))));
+    QMutexLocker lock(&m_mutex);
 
-    toxDo();
+    // let tox do some work
+    tox_do(m_tox);
+
+    // let the modules do some work
     m_ioModule->update();
     m_msgModule->update();
+
+    // monitor DHT server connection status
+    if (m_lastConnStatus != isConnected())
+    {
+        m_lastConnStatus = isConnected();
+        emit connectionStatusChanged(isConnected());
+    }
+
+    // update interval
+    m_ticker.setInterval(qMax(1, int(tox_do_interval(m_tox))));
 }
 
 void Core::loadConfig(const QString& filename)
@@ -143,21 +163,6 @@ void Core::initCore()
         qDebug() << "tox_new: success";
 }
 
-void Core::kill()
-{
-    QMutexLocker lock(&m_mutex);
-
-    tox_kill(m_tox);
-    qDebug() << "tox_kill";
-}
-
-void Core::toxDo()
-{
-    QMutexLocker lock(&m_mutex);
-
-    tox_do(m_tox);
-}
-
 void Core::bootstrap()
 {
     QMutexLocker lock(&m_mutex);
@@ -169,7 +174,7 @@ void Core::bootstrap()
         ToxDhtServer server = m_dhtServers.at(0);
 
         // bootstrap!
-        int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, U8Ptr(server.publicKey.data()));
+        int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, server.publicKey.data());
         if (ret == 1)
         {
             qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
@@ -177,7 +182,7 @@ void Core::bootstrap()
         }
         else
         {
-            qCritical() << "tox_bootstrap_from_address: cannot resolved address";
+            qCritical() << "tox_bootstrap_from_address failed: " << server.address << ":" << server.port;
             servers.pop_front();
         }
     }

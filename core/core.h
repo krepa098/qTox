@@ -41,10 +41,8 @@ class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
+    explicit Core(QThread* coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers);
     ~Core();
-
-    static void registerMetaTypes();
 
     void loadConfig(const QString& filename);
     void saveConfig(const QString& filename);
@@ -53,19 +51,17 @@ public:
     CoreMessengerModule* msgModule();
 
 signals:
+    void connectionStatusChanged(bool connected);
 
 public slots:
     void start();
-    void deleteLater();
 
 private slots:
     void onTimeout();
 
 protected:
-    // tox wrappers
+    // tox helpers
     void initCore();
-    void kill();
-    void toxDo();
     void bootstrap();
     bool isConnected();
 
@@ -74,6 +70,7 @@ private:
 
     QTimer m_ticker;
 
+    bool m_lastConnStatus;
     bool m_ipV6Enabled;
     QList<ToxDhtServer> m_dhtServers;
 
