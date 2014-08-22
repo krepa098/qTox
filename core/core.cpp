@@ -20,7 +20,6 @@
 #include <QCoreApplication>
 #include <QMutexLocker>
 #include <QVector>
-#include <QtEndian>
 #include <QFileInfo>
 
 #include <tox/tox.h>
@@ -85,8 +84,6 @@ void Core::onTimeout()
     toxDo();
     m_ioModule->update();
     m_msgModule->update();
-
-
 }
 
 void Core::loadConfig(const QString& filename)
@@ -128,7 +125,12 @@ void Core::initCore()
 {
     QMutexLocker lock(&m_mutex);
 
-    if ((m_tox = tox_new(m_ipV6Enabled ? 1 : 0)) == nullptr)
+    Tox_Options options;
+    options.ipv6enabled = m_ipV6Enabled ? 1 : 0;
+    options.udp_disabled = 0;
+    options.proxy_enabled = 0;
+
+    if ((m_tox = tox_new(&options)) == nullptr)
         qCritical() << "tox_new: Cannot initialize core";
     else
         qDebug() << "tox_new: success";
@@ -155,11 +157,7 @@ void Core::bootstrap()
 
     ToxDhtServer server = m_bootstrapServers.at(0);
 
-    int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(),
-                                         m_ipV6Enabled ? 1 : 0,
-                                         qToBigEndian(server.port),
-                                         U8Ptr(server.publicKey.data()));
-
+    int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, U8Ptr(server.publicKey.data()));
     if (ret == 1)
         qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
     else
