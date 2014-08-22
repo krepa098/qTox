@@ -69,9 +69,9 @@ void Settings::load()
         int serverListSize = s.beginReadArray("dhtServerList");
         for (int i = 0; i < serverListSize; i ++) {
             s.setArrayIndex(i);
-            DhtServer server;
+            ToxDhtServer server;
             server.name = s.value("name").toString();
-            server.userId = s.value("userId").toString();
+            server.publicKey = ToxPublicKey::fromHex(s.value("userId").toString());
             server.address = s.value("address").toString();
             server.port = s.value("port").toInt();
             dhtServerList << server;
@@ -140,7 +140,7 @@ void Settings::save(QString path)
         for (int i = 0; i < dhtServerList.size(); i ++) {
             s.setArrayIndex(i);
             s.setValue("name", dhtServerList[i].name);
-            s.setValue("userId", dhtServerList[i].userId);
+            s.setValue("userId", dhtServerList[i].publicKey.toHex());
             s.setValue("address", dhtServerList[i].address);
             s.setValue("port", dhtServerList[i].port);
         }
@@ -198,12 +198,12 @@ QString Settings::getSettingsDirPath()
 #endif
 }
 
-const QList<Settings::DhtServer>& Settings::getDhtServerList() const
+const QList<ToxDhtServer> &Settings::getDhtServerList() const
 {
     return dhtServerList;
 }
 
-void Settings::setDhtServerList(const QList<DhtServer>& newDhtServerList)
+void Settings::setDhtServerList(const QList<ToxDhtServer> &newDhtServerList)
 {
     dhtServerList = newDhtServerList;
     emit dhtServerListChanged();

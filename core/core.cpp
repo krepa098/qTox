@@ -21,6 +21,9 @@
 #include <QMutexLocker>
 #include <QVector>
 #include <QFileInfo>
+#include <QFile>
+#include <QDateTime>
+#include <algorithm>
 
 #include <tox/tox.h>
 
@@ -30,15 +33,19 @@
  * CORE
  * ====================*/
 
-Core::Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers)
+Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
     : QObject(nullptr)
     , m_tox(nullptr)
     , m_ipV6Enabled(enableIPv6)
-    , m_bootstrapServers(dhtServers)
+    , m_dhtServers(dhtServers)
     , m_ioModule(nullptr)
     , m_msgModule(nullptr)
     , m_mutex(QMutex::Recursive)
 {
+    // randomize the dht server
+    srand(QDateTime::currentDateTime().toTime_t());
+    std::random_shuffle(m_dhtServers.begin(),m_dhtServers.end());
+
     initCore();
 
     m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
@@ -64,7 +71,7 @@ void Core::start()
     connect(&m_ticker, &QTimer::timeout, this, &Core::onTimeout, Qt::DirectConnection);
 
     m_ticker.setSingleShot(false);
-    m_ticker.start(10);
+    m_ticker.start(int(tox_do_interval(m_tox)));
 
     m_ioModule->start();
     m_msgModule->start();
@@ -155,13 +162,25 @@ void Core::bootstrap()
 {
     QMutexLocker lock(&m_mutex);
 
-    ToxDhtServer server = m_bootstrapServers.at(0);
+    QList<ToxDhtServer> servers = m_dhtServers;
 
-    int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, U8Ptr(server.publicKey.data()));
-    if (ret == 1)
-        qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
-    else
-        qCritical() << "tox_bootstrap_from_address: cannot resolved address";
+    while(!servers.empty())
+    {
+        ToxDhtServer server = m_dhtServers.at(0);
+
+        // bootstrap!
+        int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, U8Ptr(server.publicKey.data()));
+        if (ret == 1)
+        {
+            qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
+            return;
+        }
+        else
+        {
+            qCritical() << "tox_bootstrap_from_address: cannot resolved address";
+            servers.pop_front();
+        }
+    }
 }
 
 bool Core::isConnected()

@@ -157,23 +157,10 @@ Widget::Widget(QWidget *parent)
     camera = new Camera;
     camview = new SelfCamView(camera);
 
-    //    qRegisterMetaType<Status>("Status");
-    //    qRegisterMetaType<vpx_image>("vpx_image");
-    //    qRegisterMetaType<uint8_t>("uint8_t");
-    //    qRegisterMetaType<int32_t>("int32_t");
-    //    qRegisterMetaType<int64_t>("int64_t");
-    //    qRegisterMetaType<ToxFile>("ToxFile");
-    //    qRegisterMetaType<ToxFile::FileDirection>("ToxFile::FileDirection");
-
-    ToxDhtServer server;
-    server.address = Settings::getInstance().getDhtServerList().at(0).address;
-    server.port = Settings::getInstance().getDhtServerList().at(0).port;
-    server.publicKey = Settings::getInstance().getDhtServerList().at(0).userId;
-
     Core::registerMetaTypes();
 
     coreThread = new QThread();
-    core = new Core(Settings::getInstance().getEnableIPv6(), QVector<ToxDhtServer>() << server);
+    core = new Core(Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
     core->loadConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
     core->moveToThread(coreThread);
     connect(coreThread, &QThread::finished, core, &Core::deleteLater);

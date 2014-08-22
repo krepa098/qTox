@@ -21,6 +21,8 @@
 #include <QMainWindow>
 #include <QSplitter>
 
+#include "core/core.h"
+
 class Settings : public QObject
 {
     Q_OBJECT
@@ -32,16 +34,8 @@ public:
 
     static QString getSettingsDirPath();
 
-    struct DhtServer
-    {
-        QString name;
-        QString userId;
-        QString address;
-        quint16 port;
-    };
-
-    const QList<DhtServer>& getDhtServerList() const;
-    void setDhtServerList(const QList<DhtServer>& newDhtServerList);
+    const QList<ToxDhtServer>& getDhtServerList() const;
+    void setDhtServerList(const QList<ToxDhtServer>& newDhtServerList);
 
     bool getEnableIPv6() const;
     void setEnableIPv6(bool newValue);
@@ -142,7 +136,7 @@ private:
 
     bool loaded;
 
-    QList<DhtServer> dhtServerList;
+    QList<ToxDhtServer> dhtServerList;
     int dhtServerId;
     bool dontShowDhtDialog;
 

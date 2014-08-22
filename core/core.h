@@ -17,13 +17,11 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include <QFile>
 #include <QObject>
 #include <QThread>
 #include <QTimer>
 #include <QMutex>
-#include <QVector>
-#include <QMap>
+#include <QList>
 
 #include "helpers.h"
 #include "ioModule.h"
@@ -33,16 +31,17 @@ struct Tox;
 
 struct ToxDhtServer
 {
+    QString name;
     QString address;
     quint16 port;
-    QString publicKey;
+    ToxPublicKey publicKey;
 };
 
 class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core(bool enableIPv6, QVector<ToxDhtServer> dhtServers);
+    explicit Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
     ~Core();
 
     static void registerMetaTypes();
@@ -76,7 +75,7 @@ private:
     QTimer m_ticker;
 
     bool m_ipV6Enabled;
-    QVector<ToxDhtServer> m_bootstrapServers;
+    QList<ToxDhtServer> m_dhtServers;
 
     CoreIOModule* m_ioModule;
     CoreMessengerModule* m_msgModule;
