@@ -14,7 +14,7 @@
     See the COPYING file for more details.
 */
 
-#include "ioModule.h"
+#include "iomodule.h"
 #include "helpers.h"
 
 #include <QFile>

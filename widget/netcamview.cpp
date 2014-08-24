@@ -15,7 +15,7 @@
 */
 
 #include "netcamview.h"
-#include "core/av.h"
+#include "core/avmodule.h"
 #include "widget.h"
 #include <QApplication>
 #include <QtConcurrent/QtConcurrent>

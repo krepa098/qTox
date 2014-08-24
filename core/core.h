@@ -24,8 +24,9 @@
 #include <QList>
 
 #include "helpers.h"
-#include "ioModule.h"
-#include "msgModule.h"
+#include "iomodule.h"
+#include "msgmodule.h"
+#include "avmodule.h"
 
 struct Tox;
 
@@ -49,6 +50,7 @@ public:
 
     CoreIOModule* ioModule();
     CoreMessengerModule* msgModule();
+    CoreAVModule* avModule();
 
 signals:
     void connectionStatusChanged(bool connected);
@@ -76,6 +78,7 @@ private:
 
     CoreIOModule* m_ioModule;
     CoreMessengerModule* m_msgModule;
+    CoreAVModule* m_avModule;
     QMutex m_mutex;
 };
 

@@ -33,7 +33,7 @@
  * CORE
  * ====================*/
 
-Core::Core(QThread *coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
+Core::Core(QThread* coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
     : QObject(nullptr) // Core must not be a child of coreThread
     , m_tox(nullptr)
     , m_lastConnStatus(false)
@@ -41,12 +41,12 @@ Core::Core(QThread *coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
     , m_dhtServers(dhtServers)
     , m_ioModule(nullptr)
     , m_msgModule(nullptr)
+    , m_avModule(nullptr)
     , m_mutex(QMutex::Recursive)
 {
     // register metatypes
     static bool metaTypesRegistered = false;
-    if(!metaTypesRegistered)
-    {
+    if (!metaTypesRegistered) {
         metaTypesRegistered = true;
         qRegisterMetaType<ToxFileTransferInfo>();
     }
@@ -57,9 +57,9 @@ Core::Core(QThread *coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
     connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
     connect(coreThread, &QThread::started, this, &Core::start);
 
-    // randomize the dht server
+    // randomize the dht server list
     srand(QDateTime::currentDateTime().toTime_t());
-    std::random_shuffle(m_dhtServers.begin(),m_dhtServers.end());
+    std::random_shuffle(m_dhtServers.begin(), m_dhtServers.end());
 
     // start tox
     initCore();
@@ -67,6 +67,7 @@ Core::Core(QThread *coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
     // modules
     m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
     m_msgModule = new CoreMessengerModule(this, m_tox, &m_mutex);
+    m_avModule = new CoreAVModule(this, m_tox, &m_mutex);
 }
 
 Core::~Core()
@@ -87,6 +88,7 @@ void Core::start()
 
     m_ioModule->start();
     m_msgModule->start();
+    m_avModule->start();
 
     bootstrap();
 }
@@ -101,10 +103,10 @@ void Core::onTimeout()
     // let the modules do some work
     m_ioModule->update();
     m_msgModule->update();
+    m_avModule->update();
 
     // monitor DHT server connection status
-    if (m_lastConnStatus != isConnected())
-    {
+    if (m_lastConnStatus != isConnected()) {
         m_lastConnStatus = isConnected();
         emit connectionStatusChanged(isConnected());
     }
@@ -138,14 +140,19 @@ void Core::saveConfig(const QString& filename)
     config.write(configData);
 }
 
-CoreIOModule *Core::ioModule()
+CoreIOModule* Core::ioModule()
 {
     return m_ioModule;
 }
 
-CoreMessengerModule *Core::msgModule()
+CoreMessengerModule* Core::msgModule()
 {
     return m_msgModule;
+}
+
+CoreAVModule *Core::avModule()
+{
+    return m_avModule;
 }
 
 void Core::initCore()
@@ -169,21 +176,17 @@ void Core::bootstrap()
 
     QList<ToxDhtServer> servers = m_dhtServers;
 
-    while(!servers.empty())
-    {
-        ToxDhtServer server = m_dhtServers.at(0);
+    while (!servers.empty()) {
+        ToxDhtServer server = m_dhtServers.back();
 
         // bootstrap!
         int ret = tox_bootstrap_from_address(m_tox, server.address.toLatin1().data(), server.port, server.publicKey.data());
-        if (ret == 1)
-        {
+        if (ret == 1) {
             qDebug() << "tox_bootstrap_from_address: " << server.address << ":" << server.port;
             return;
-        }
-        else
-        {
+        } else {
             qCritical() << "tox_bootstrap_from_address failed: " << server.address << ":" << server.port;
-            servers.pop_front();
+            servers.pop_back();
         }
     }
 }
@@ -194,4 +197,3 @@ bool Core::isConnected()
 
     return tox_isconnected(m_tox) == 1 ? true : false;
 }
-

@@ -14,7 +14,7 @@
     See the COPYING file for more details.
 */
 
-#include "msgModule.h"
+#include "msgmodule.h"
 
 #include <QMutexLocker>
 #include <QDebug>
