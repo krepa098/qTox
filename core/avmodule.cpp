@@ -34,6 +34,7 @@ ToxCall::ToxCall(int callIndex, int friendnumber, QAudioFormat format)
     , m_friendnumber(friendnumber)
 {
     m_audioOutput = new QAudioOutput(format, this);
+    m_audioOutput->setBufferSize(1024*128); // buffer size needs tweaking (latency)
     m_audioBuffer = m_audioOutput->start();
 }
 
@@ -121,7 +122,7 @@ void CoreAVModule::startCall(int friendnumber, bool withVideo)
     int ret = toxav_call(m_toxAV, &callIndex, friendnumber, &av_DefaultSettings, TOXAV_RINGING_SECONDS);
 
     if (ret == 0)
-        emit callStarted(callIndex, friendnumber, withVideo);
+        emit callStarted(friendnumber, callIndex, withVideo);
     else
         qDebug() << "Start Call Error: " << ret;
 }
@@ -164,10 +165,7 @@ void CoreAVModule::hangupCall(int callIndex)
 
     int ret = toxav_hangup(m_toxAV, callIndex);
     if (ret == 0)
-    {
-        emit callHungup(callIndex, toxav_get_peer_id(m_toxAV, callIndex, 0));
         m_calls.remove(callIndex);
-    }
     else
         qDebug() << "Hangup Call Error: " << ret;
 }
@@ -178,10 +176,8 @@ void CoreAVModule::stopCall(int callIndex)
 
     int ret = toxav_stop_call(m_toxAV, callIndex);
     if (ret == 0)
-    {
-        emit callStopped(callIndex, toxav_get_peer_id(m_toxAV, callIndex, 0));
         m_calls.remove(callIndex);
-    } else
+    else
         qDebug() << "Stop Call Error: " << ret;
 }
 
@@ -275,23 +271,40 @@ void CoreAVModule::callbackAvInvite(void* agent, int32_t call_idx, void* arg)
     ToxAvCSettings settings;
     toxav_get_peer_csettings(module->m_toxAV, call_idx, 0, &settings);
     int friendnumber = toxav_get_peer_id(module->m_toxAV, call_idx, 0);
-    emit module->callInviteRcv(call_idx, friendnumber, settings.call_type == TypeVideo ? true : false);
+    emit module->callInviteRcv(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
+
+    qDebug() << "INVITE: " << call_idx << " id " << friendnumber << " video " << (settings.call_type == TypeVideo ? true : false);
 }
 
 void CoreAVModule::callbackAvStart(void* agent, int32_t call_idx, void* arg)
 {
+    auto module = static_cast<CoreAVModule*>(arg);
+
+    ToxAvCSettings settings;
+    toxav_get_peer_csettings(module->m_toxAV, call_idx, 0, &settings);
+    int friendnumber = toxav_get_peer_id(module->m_toxAV, call_idx, 0);
+    emit module->callStarted(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
 }
 
 void CoreAVModule::callbackAvCancel(void* agent, int32_t call_idx, void* arg)
 {
+    auto module = static_cast<CoreAVModule*>(arg);
+
+    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
 }
 
 void CoreAVModule::callbackAvReject(void* agent, int32_t call_idx, void* arg)
 {
+    auto module = static_cast<CoreAVModule*>(arg);
+
+    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
 }
 
 void CoreAVModule::callbackAvEnd(void* agent, int32_t call_idx, void* arg)
 {
+    auto module = static_cast<CoreAVModule*>(arg);
+
+    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
 }
 
 void CoreAVModule::callbackAvOnRinging(void* agent, int32_t call_idx, void* arg)
@@ -304,6 +317,9 @@ void CoreAVModule::callbackAvOnStarting(void* agent, int32_t call_idx, void* arg
 
 void CoreAVModule::callbackAvOnEnding(void* agent, int32_t call_idx, void* arg)
 {
+    auto module = static_cast<CoreAVModule*>(arg);
+
+    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
 }
 
 void CoreAVModule::callbackAvOnRequestTimeout(void* agent, int32_t call_idx, void* arg)

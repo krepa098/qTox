@@ -430,11 +430,15 @@ void Widget::addFriend(int friendId, const QString &userId)
     //    connect(core, &Core::avStart, newfriend->chatForm, &ChatForm::onAvStart);
     //    connect(core, &Core::avCancel, newfriend->chatForm, &ChatForm::onAvCancel);
     //    connect(core, &Core::avEnd, newfriend->chatForm, &ChatForm::onAvEnd);
-    connect(core->avModule(), &CoreAVModule::callInviteRcv, newfriend->chatForm, &ChatForm::onAvRinging);
+    connect(core->avModule(), &CoreAVModule::callInviteRcv, newfriend->chatForm, &ChatForm::onAvInvite);
+    connect(core->avModule(), &CoreAVModule::callStopped, newfriend->chatForm, &ChatForm::onAvCancel);
+    connect(core->avModule(), &CoreAVModule::callStarted, newfriend->chatForm, &ChatForm::onAvStart);
     //    connect(core, &Core::avStarting, newfriend->chatForm, &ChatForm::onAvStarting);
     //    connect(core, &Core::avEnding, newfriend->chatForm, &ChatForm::onAvEnding);
     //    connect(core, &Core::avRequestTimeout, newfriend->chatForm, &ChatForm::onAvRequestTimeout);
     //    connect(core, &Core::avPeerTimeout, newfriend->chatForm, &ChatForm::onAvPeerTimeout);
+
+    connect(newfriend->chatForm, &ChatForm::answerCall, core->avModule(), &CoreAVModule::answerCall);
 }
 
 void Widget::addFriendFailed(const QString&)

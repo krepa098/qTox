@@ -67,12 +67,13 @@ public:
     void setAudioInput(QAudioDeviceInfo info);
 
 signals:
-    void callStarted(int callIndex, int friendnumber, bool withVideo);
-    void callAnswered(int callIndex, int friendnumber, bool withVideo);
-    void callHungup(int callIndex, int friendnumber);
-    void callStopped(int callIndex, int friendnumber);
+    // local user
+    void callStarted(int friendnumber, int callIndex, bool withVideo);
+    void callAnswered(int friendnumber, int callIndex, bool withVideo);
+    void callHungup(int friendnumber, int callIndex);
+    void callStopped(int friendnumber, int callIndex);
 
-    void callInviteRcv(int callIndex, int friendnumber, bool withVideo);
+    void callInviteRcv(int friendnumber, int callIndex, bool withVideo);
 
 public slots:
     void startCall(int friendnumber, bool withVideo);

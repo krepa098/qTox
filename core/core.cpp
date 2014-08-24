@@ -50,13 +50,6 @@ Core::Core(QThread* coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
         metaTypesRegistered = true;
         qRegisterMetaType<ToxFileTransferInfo>();
     }
-
-    // connect to thread
-    moveToThread(coreThread);
-    connect(coreThread, &QThread::finished, this, &Core::deleteLater);
-    connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
-    connect(coreThread, &QThread::started, this, &Core::start);
-
     // randomize the dht server list
     srand(QDateTime::currentDateTime().toTime_t());
     std::random_shuffle(m_dhtServers.begin(), m_dhtServers.end());
@@ -68,6 +61,12 @@ Core::Core(QThread* coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers)
     m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
     m_msgModule = new CoreMessengerModule(this, m_tox, &m_mutex);
     m_avModule = new CoreAVModule(this, m_tox, &m_mutex);
+
+    // connect to thread
+    moveToThread(coreThread); // move this object all all of its children to the core thread
+    connect(coreThread, &QThread::finished, this, &Core::deleteLater);
+    connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
+    connect(coreThread, &QThread::started, this, &Core::start);
 }
 
 Core::~Core()

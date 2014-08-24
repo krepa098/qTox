@@ -510,7 +510,7 @@ void ChatForm::onAvPeerTimeout(int FriendId, int)
 
 void ChatForm::onAnswerCallTriggered()
 {
-    emit answerCall(callId);
+    emit answerCall(callId, false);
 }
 
 void ChatForm::onHangupCallTriggered()

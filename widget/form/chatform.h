@@ -55,7 +55,7 @@ signals:
     void sendFile(int friendId, QString file);
     void startCall(int friendId);
     void startVideoCall(int friendId, bool video);
-    void answerCall(int callId);
+    void answerCall(int callId, bool withVideo);
     void hangupCall(int callId);
     void cancelCall(int callId, int friendId);
 
