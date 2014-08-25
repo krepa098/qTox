@@ -42,7 +42,7 @@ class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core(QThread* coreThread, bool enableIPv6, QList<ToxDhtServer> dhtServers);
+    explicit Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
     ~Core();
 
     void loadConfig(const QString& filename);

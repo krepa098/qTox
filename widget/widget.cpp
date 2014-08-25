@@ -157,9 +157,16 @@ Widget::Widget(QWidget *parent)
     camera = new Camera;
     camview = new SelfCamView(camera);
 
+    // create core in background thread
     coreThread = new QThread();
-    core = new Core(coreThread, Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
+    core = new Core(Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
     core->loadConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
+
+    // connect core to core thread
+    core->moveToThread(coreThread); // move this object all all of its children to the core thread
+    connect(coreThread, &QThread::finished, core, &Core::deleteLater);
+    connect(coreThread, &QThread::finished, coreThread, &QThread::deleteLater);
+    connect(coreThread, &QThread::started, core, &Core::start); // this starts the core after we start the thread
 
     connect(core, &Core::connectionStatusChanged, this, &Widget::onConnectionStatusChanged);
     connect(core->msgModule(), &CoreMessengerModule::usernameChanged, this, &Widget::setUsername);
@@ -219,7 +226,6 @@ Widget::~Widget()
     instance = nullptr;
     coreThread->exit();
     coreThread->wait();
-    delete core;
     delete camview;
 
     hideMainForms();

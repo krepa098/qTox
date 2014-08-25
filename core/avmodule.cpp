@@ -26,8 +26,9 @@
  * ToxCall
  ********************/
 
-ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer)
-    : m_toxAV(toxAV)
+ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject *parent)
+    : QObject(parent)
+    , m_toxAV(toxAV)
     , m_audioOutput(nullptr)
     , m_audioDevice(nullptr)
     , m_callIndex(callIndex)
@@ -66,8 +67,10 @@ void ToxCall::startAudioOutput(QAudioDeviceInfo info)
     outputFormat.setSampleRate(peerCodec.audio_sample_rate);
     outputFormat.setChannelCount(peerCodec.audio_channels);
 
-    qDebug() << "creating output samplerate [" << peerCodec.audio_sample_rate << "] channels [" << peerCodec.audio_channels << "]"
-             << "duration [" << peerCodec.audio_frame_duration << "] peer " << m_peer;
+    qDebug() << QString("AV: Creating audio output: samplerate [%1] channels [%2] frame duration [%3]")
+                .arg(peerCodec.audio_sample_rate)
+                .arg(peerCodec.audio_channels)
+                .arg(peerCodec.audio_frame_duration);
 
     int bufferSize = outputFormat.bytesForDuration(peerCodec.audio_frame_duration*1000*32);
 
@@ -77,10 +80,18 @@ void ToxCall::startAudioOutput(QAudioDeviceInfo info)
     m_audioDevice = m_audioOutput->start();
 }
 
-void ToxCall::writeToOutputDev(const QByteArray &data)
+void ToxCall::writeToOutputDev(QByteArray data)
 {
     if (m_audioDevice)
         m_audioDevice->write(data);
+}
+
+QAudioFormat ToxCall::getAudioOutputFormat() const
+{
+    if (m_audioOutput)
+        return m_audioOutput->format();
+
+    return QAudioFormat();
 }
 
 /********************
@@ -288,8 +299,10 @@ void CoreAVModule::onAudioTimerTimeout()
 
 void CoreAVModule::addNewCall(int callIndex, int peer)
 {
+    QMutexLocker lock(coreMutex());
+
     //create and insert the new call
-    ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer));
+    ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer, this));
     call->startAudioOutput(m_audioOutputDeviceInfo);
 
     m_calls.insert(callIndex, call);
@@ -305,8 +318,9 @@ void CoreAVModule::callbackAudioRecv(ToxAv* toxAV, int32_t call_idx, int16_t* fr
     ToxCall::Ptr call = module->m_calls.value(call_idx);
     if (!call.isNull())
     {
-        QByteArray samples = QByteArray(reinterpret_cast<char*>(frame), frame_size * sizeof(int16_t));
-        call->writeToOutputDev(samples);
+        QAudioFormat format = call->getAudioOutputFormat();
+        QByteArray audioFrame = QByteArray(reinterpret_cast<char*>(frame), frame_size * format.bytesPerFrame());
+        call->writeToOutputDev(audioFrame);
     }
 
     Q_UNUSED(toxAV)
@@ -320,12 +334,15 @@ void CoreAVModule::callbackAvInvite(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
 
+    // get codec settings
     ToxAvCSettings settings;
     toxav_get_peer_csettings(module->m_toxAV, call_idx, 0, &settings);
-    int friendnumber = toxav_get_peer_id(module->m_toxAV, call_idx, 0);
-    emit module->callInviteRcv(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
 
-    qDebug() << "INVITE: " << call_idx << " id " << friendnumber << " video " << (settings.call_type == TypeVideo ? true : false);
+    //get the friend number from peer
+    int friendnumber = toxav_get_peer_id(module->m_toxAV, call_idx, 0);
+
+    //let the world know we got invited to join a call
+    emit module->callInviteRcv(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
 
     Q_UNUSED(agent)
     Q_UNUSED(arg)
@@ -333,16 +350,11 @@ void CoreAVModule::callbackAvInvite(void* agent, int32_t call_idx, void* arg)
 
 void CoreAVModule::callbackAvStart(void* agent, int32_t call_idx, void* arg)
 {
-    qDebug() << "callbackAvStart";
+    // started a call initiated by a friend
     auto module = static_cast<CoreAVModule*>(arg);
-
-    ToxAvCSettings settings;
-    toxav_get_peer_csettings(module->m_toxAV, call_idx, 0, &settings);
-    int friendnumber = toxav_get_peer_id(module->m_toxAV, call_idx, 0);
-    toxav_prepare_transmission(module->m_toxAV, call_idx, av_jbufdc, av_VADd, settings.call_type == TypeVideo ? 1 : 0);
-    emit module->callStarted(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
-
     module->addNewCall(call_idx, 0);
+
+    qDebug() << "callbackAvStart";
 
     Q_UNUSED(agent)
     Q_UNUSED(arg)
@@ -351,9 +363,7 @@ void CoreAVModule::callbackAvStart(void* agent, int32_t call_idx, void* arg)
 void CoreAVModule::callbackAvCancel(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
-
     emit module->callStopped(call_idx);
-
     module->m_calls.remove(call_idx);
 
     Q_UNUSED(agent)
@@ -363,7 +373,6 @@ void CoreAVModule::callbackAvCancel(void* agent, int32_t call_idx, void* arg)
 void CoreAVModule::callbackAvReject(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
-
     emit module->callStopped(call_idx);
 
     Q_UNUSED(agent)
@@ -373,9 +382,7 @@ void CoreAVModule::callbackAvReject(void* agent, int32_t call_idx, void* arg)
 void CoreAVModule::callbackAvEnd(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
-
     emit module->callStopped(call_idx);
-
     module->m_calls.remove(call_idx);
 
     Q_UNUSED(agent)
@@ -384,13 +391,15 @@ void CoreAVModule::callbackAvEnd(void* agent, int32_t call_idx, void* arg)
 
 void CoreAVModule::callbackAvOnRinging(void* agent, int32_t call_idx, void* arg)
 {
+    qDebug() << "RING RING ...";
     Q_UNUSED(agent)
     Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnStarting(void* agent, int32_t call_idx, void* arg)
 {
-    qDebug() << "callbackAvOnStarting";
+    // our recipient accepted the call
+    qDebug() << "AV: Call " << call_idx << " accepted!";
 
     auto module = static_cast<CoreAVModule*>(arg);
     module->addNewCall(call_idx, 0);
@@ -402,9 +411,8 @@ void CoreAVModule::callbackAvOnStarting(void* agent, int32_t call_idx, void* arg
 void CoreAVModule::callbackAvOnEnding(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
-    module->m_calls.remove(call_idx);
-
     emit module->callStopped(call_idx);
+    module->m_calls.remove(call_idx);
 
     Q_UNUSED(agent)
     Q_UNUSED(arg)
@@ -413,6 +421,7 @@ void CoreAVModule::callbackAvOnEnding(void* agent, int32_t call_idx, void* arg)
 void CoreAVModule::callbackAvOnRequestTimeout(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
+    emit module->callStopped(call_idx);
     module->m_calls.remove(call_idx);
 
     Q_UNUSED(agent)
@@ -422,6 +431,7 @@ void CoreAVModule::callbackAvOnRequestTimeout(void* agent, int32_t call_idx, voi
 void CoreAVModule::callbackAvOnPeerTimeout(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
+    emit module->callStopped(call_idx);
     module->m_calls.remove(call_idx);
 
     Q_UNUSED(agent)

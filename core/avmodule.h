@@ -41,11 +41,12 @@ class ToxCall : public QObject
     Q_OBJECT
 public:
     using Ptr = QSharedPointer<ToxCall>;
-    ToxCall(ToxAv* toxAV, int callIndex, int peer);
+    ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject* parent);
     ~ToxCall();
 
     void startAudioOutput(QAudioDeviceInfo info);
-    void writeToOutputDev(const QByteArray& data);
+    void writeToOutputDev(QByteArray data);
+    QAudioFormat getAudioOutputFormat() const;
 
 private:
     ToxAv* m_toxAV;
