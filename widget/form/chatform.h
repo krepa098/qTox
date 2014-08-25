@@ -53,11 +53,11 @@ public:
 signals:
     void sendMessage(int, QString);
     void sendFile(int friendId, QString file);
-    void startCall(int friendId);
+    void startCall(int friendId, bool video);
     void startVideoCall(int friendId, bool video);
     void answerCall(int callId, bool withVideo);
     void hangupCall(int callId);
-    void cancelCall(int callId, int friendId);
+    void cancelCall(int callId);
 
 public slots:
     void addNewFileTransfer(ToxFileTransferInfo trans);

@@ -522,7 +522,7 @@ void ChatForm::onCallTriggered()
 {
     callButton->disconnect();
     videoButton->disconnect();
-    emit startCall(f->friendId);
+    emit startCall(f->friendId, false);
 }
 
 void ChatForm::onVideoCallTriggered()
@@ -545,7 +545,7 @@ void ChatForm::onCancelCallTriggered()
     connect(callButton, SIGNAL(clicked()), this, SLOT(onCallTriggered()));
     connect(videoButton, SIGNAL(clicked()), this, SLOT(onVideoCallTriggered()));
     netcam->hide();
-    emit cancelCall(callId, f->friendId);
+    emit cancelCall(callId);
 }
 
 void ChatForm::onChatContextMenuRequested(QPoint pos)

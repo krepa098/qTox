@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QMap>
 #include <QSharedPointer>
+#include <QTimer>
 
 #include <QtMultimedia/QAudioInput>
 #include <QtMultimedia/QAudioBuffer>
@@ -41,16 +42,18 @@ class ToxCall : public QObject
     Q_OBJECT
 public:
     using Ptr = QSharedPointer<ToxCall>;
-    ToxCall(int callIndex, int friendnumber, QAudioFormat format);
+    ToxCall(_ToxAv* toxAV, int callIndex, int peer);
+    ~ToxCall();
 
+    void startAudioOutput();
     void writeAudio(const QByteArray& data);
 
 private:
-    QAudioFormat m_audioFormat;
+    _ToxAv* m_toxAV;
     QAudioOutput* m_audioOutput;
-    QIODevice* m_audioBuffer;
+    QIODevice* m_audioDevice;
     int m_callIndex;
-    int m_friendnumber;
+    int m_peer;
     int m_state;
 
 };
@@ -82,10 +85,14 @@ public slots:
     void stopCall(int callIndex);
 
     void sendVideoFrame(int callIndex, vpx_image* img);
-    void sendAudioFrame(int callIndex, QByteArray frame);
+    void sendAudioFrame(int callIndex, const QByteArray &framedata, int frameSize);
 
 private slots:
-    void onAudioInputAvailable();
+    void onAudioTimerTimeout();
+    void onAudioInputStateChanged(QAudio::State);
+
+protected:
+    void addNewCall(int callIndex, int peer);
 
 private:
     // callbacks -- userdata is always a pointer to an instance of this class
@@ -115,8 +122,9 @@ private:
     QByteArray m_encoderBuffer;
 
     QAudioInput* m_audioSource;
-    QIODevice* m_audioInputBuffer;
+    QIODevice* m_audioInputDevice;
     QAudioOutput* m_audioOutput;
+    QTimer m_audioTimer;
 };
 
 #endif // AVMODULE_H

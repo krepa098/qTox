@@ -73,8 +73,8 @@ Core::~Core()
 {
     QMutexLocker lock(&m_mutex);
 
-    tox_kill(m_tox);
     qDebug() << "tox_kill";
+    tox_kill(m_tox);
 }
 
 void Core::start()
