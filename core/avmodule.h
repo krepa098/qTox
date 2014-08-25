@@ -33,29 +33,27 @@
 
 #define TOXAV_MAXCALLS 32
 #define TOXAV_RINGING_SECONDS 15
-#define TOXAV_VIDEOBUFFER_SIZE 1024 * 1024 * 3
 
-struct _ToxAv;
+typedef struct _ToxAv ToxAv;
 
 class ToxCall : public QObject
 {
     Q_OBJECT
 public:
     using Ptr = QSharedPointer<ToxCall>;
-    ToxCall(_ToxAv* toxAV, int callIndex, int peer);
+    ToxCall(ToxAv* toxAV, int callIndex, int peer);
     ~ToxCall();
 
-    void startAudioOutput();
-    void outputAudio(const QByteArray& data);
+    void startAudioOutput(QAudioDeviceInfo info);
+    void writeToOutputDev(const QByteArray& data);
 
 private:
-    _ToxAv* m_toxAV;
+    ToxAv* m_toxAV;
     QAudioOutput* m_audioOutput;
     QIODevice* m_audioDevice;
     int m_callIndex;
     int m_peer;
     int m_state;
-
 };
 
 class CoreAVModule : public CoreModule {
@@ -67,7 +65,7 @@ public:
     void update();
     void start();
 
-    void setAudioInputSource(QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice());
+    void setAudioInputSource(QAudioDeviceInfo info);
 
 signals:
     // local user
@@ -89,7 +87,6 @@ public slots:
 
 private slots:
     void onAudioTimerTimeout();
-    void onAudioInputStateChanged(QAudio::State);
 
 protected:
     void addNewCall(int callIndex, int peer);
@@ -97,8 +94,8 @@ protected:
 private:
     // callbacks -- userdata is always a pointer to an instance of this class
     // audio & video
-    static void callbackAudioRecv(_ToxAv* toxAV, int32_t call_idx, int16_t* frame, int frame_size, void* userdata);
-    static void callbackVideoRecv(_ToxAv* toxAV, int32_t call_idx, vpx_image_t* frame, void* userdata);
+    static void callbackAudioRecv(ToxAv* toxAV, int32_t call_idx, int16_t* frame, int frame_size, void* userdata);
+    static void callbackVideoRecv(ToxAv* toxAV, int32_t call_idx, vpx_image_t* frame, void* userdata);
 
     // callstates
     // requests
@@ -117,14 +114,17 @@ private:
     static void callbackAvOnMediaChange(void* agent, int32_t call_idx, void* arg);
 
 private:
-    _ToxAv* m_toxAV;
+    ToxAv* m_toxAV;
     QMap<int, ToxCall::Ptr> m_calls;
     QByteArray m_encoderBuffer;
 
     QAudioInput* m_audioSource;
     QIODevice* m_audioInputDevice;
-    QAudioOutput* m_audioOutput;
     QTimer m_audioTimer;
+
+    // sources/sinks
+    QAudioDeviceInfo m_audioOutputDeviceInfo;
+    QAudioDeviceInfo m_audioInputDeviceInfo;
 };
 
 #endif // AVMODULE_H

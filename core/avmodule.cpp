@@ -26,7 +26,7 @@
  * ToxCall
  ********************/
 
-ToxCall::ToxCall(_ToxAv* toxAV, int callIndex, int peer)
+ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer)
     : m_toxAV(toxAV)
     , m_audioOutput(nullptr)
     , m_audioDevice(nullptr)
@@ -49,11 +49,15 @@ ToxCall::~ToxCall()
     toxav_kill_transmission(m_toxAV, m_callIndex);
 }
 
-void ToxCall::startAudioOutput()
+void ToxCall::startAudioOutput(QAudioDeviceInfo info)
 {
+    if (m_audioOutput)
+        delete m_audioOutput;
+
     ToxAvCSettings peerCodec;
     toxav_get_peer_csettings(m_toxAV, m_callIndex, m_peer, &peerCodec);
 
+    // out format (has to be pcm, int16, native endian)
     QAudioFormat outputFormat;
     outputFormat.setCodec("audio/pcm");
     outputFormat.setSampleSize(16);
@@ -67,12 +71,13 @@ void ToxCall::startAudioOutput()
 
     int bufferSize = outputFormat.bytesForDuration(peerCodec.audio_frame_duration*1000*32);
 
-    m_audioOutput = new QAudioOutput(outputFormat, this);
+    m_audioOutput = new QAudioOutput(info, outputFormat, this);
+    m_audioOutput->setCategory("qTox"); //does not work
     m_audioOutput->setBufferSize(bufferSize); // buffer size needs tweaking (latency)
     m_audioDevice = m_audioOutput->start();
 }
 
-void ToxCall::outputAudio(const QByteArray &data)
+void ToxCall::writeToOutputDev(const QByteArray &data)
 {
     if (m_audioDevice)
         m_audioDevice->write(data);
@@ -87,6 +92,8 @@ CoreAVModule::CoreAVModule(QObject* parent, Tox* tox, QMutex* mutex)
     , m_toxAV(nullptr)
     , m_audioSource(nullptr)
     , m_audioInputDevice(nullptr)
+    , m_audioOutputDeviceInfo(QAudioDeviceInfo::defaultOutputDevice())
+    , m_audioInputDeviceInfo(QAudioDeviceInfo::defaultInputDevice())
 {
     m_toxAV = toxav_new(tox, TOXAV_MAXCALLS);
 
@@ -125,7 +132,7 @@ void CoreAVModule::update()
 void CoreAVModule::start()
 {
     // set the default input source
-    setAudioInputSource();
+    setAudioInputSource(m_audioInputDeviceInfo);
 }
 
 void CoreAVModule::setAudioInputSource(QAudioDeviceInfo info)
@@ -151,7 +158,6 @@ void CoreAVModule::setAudioInputSource(QAudioDeviceInfo info)
 
     // create input device
     m_audioSource = new QAudioInput(info, format, this);
-    connect(m_audioSource, &QAudioInput::stateChanged, this, &CoreAVModule::onAudioInputStateChanged);
     m_audioInputDevice = m_audioSource->start();
 
     // worker, feeds audio samples to tox/opus
@@ -171,7 +177,7 @@ void CoreAVModule::startCall(int friendnumber, bool withVideo)
     if (ret == 0)
         emit callStarted(friendnumber, callIndex, withVideo);
     else
-        qDebug() << "Start Call Error: " << ret;
+        qDebug() << "AV: Start Call Error: " << ret;
 }
 
 void CoreAVModule::answerCall(int callIndex, bool withVideo)
@@ -185,10 +191,9 @@ void CoreAVModule::answerCall(int callIndex, bool withVideo)
     // answer
     int ret = toxav_answer(m_toxAV, callIndex, &answerCodec);
     if (ret == 0)
-    {
         emit callAnswered(callIndex, withVideo);
-    } else
-        qDebug() << "Answer Call Error: " << ret;
+    else
+        qDebug() << "AV: Answer Call Error: " << ret;
 }
 
 void CoreAVModule::hangupCall(int callIndex)
@@ -281,16 +286,12 @@ void CoreAVModule::onAudioTimerTimeout()
     }
 }
 
-void CoreAVModule::onAudioInputStateChanged(QAudio::State s)
-{
-    qDebug() << "STATE " << s;
-}
-
 void CoreAVModule::addNewCall(int callIndex, int peer)
 {
-    //insert the new call
+    //create and insert the new call
     ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer));
-    call->startAudioOutput();
+    call->startAudioOutput(m_audioOutputDeviceInfo);
+
     m_calls.insert(callIndex, call);
 }
 
@@ -305,7 +306,7 @@ void CoreAVModule::callbackAudioRecv(ToxAv* toxAV, int32_t call_idx, int16_t* fr
     if (!call.isNull())
     {
         QByteArray samples = QByteArray(reinterpret_cast<char*>(frame), frame_size * sizeof(int16_t));
-        call->outputAudio(samples);
+        call->writeToOutputDev(samples);
     }
 
     Q_UNUSED(toxAV)
