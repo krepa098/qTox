@@ -377,9 +377,9 @@ void ChatForm::onAvStart(int FriendId, int CallId, bool video)
     }
 }
 
-void ChatForm::onAvCancel(int FriendId, int)
+void ChatForm::onAvCancel(int CallId)
 {
-    if (FriendId != f->friendId)
+    if (callId != CallId)
         return;
     callButton->disconnect();
     videoButton->disconnect();
@@ -392,9 +392,9 @@ void ChatForm::onAvCancel(int FriendId, int)
     netcam->hide();
 }
 
-void ChatForm::onAvEnd(int FriendId, int)
+void ChatForm::onAvEnd(int CallId)
 {
-    if (FriendId != f->friendId)
+    if (callId != CallId)
         return;
     callButton->disconnect();
     videoButton->disconnect();

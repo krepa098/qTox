@@ -46,7 +46,7 @@ public:
     ~ToxCall();
 
     void startAudioOutput();
-    void writeAudio(const QByteArray& data);
+    void outputAudio(const QByteArray& data);
 
 private:
     _ToxAv* m_toxAV;
@@ -67,14 +67,14 @@ public:
     void update();
     void start();
 
-    void setAudioInput(QAudioDeviceInfo info);
+    void setAudioInputSource(QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice());
 
 signals:
     // local user
     void callStarted(int friendnumber, int callIndex, bool withVideo);
-    void callAnswered(int friendnumber, int callIndex, bool withVideo);
-    void callHungup(int friendnumber, int callIndex);
-    void callStopped(int friendnumber, int callIndex);
+    void callAnswered(int callIndex, bool withVideo);
+    void callHungup(int callIndex);
+    void callStopped(int callIndex);
 
     void callInviteRcv(int friendnumber, int callIndex, bool withVideo);
 

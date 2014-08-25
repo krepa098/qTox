@@ -35,10 +35,11 @@ ToxCall::ToxCall(_ToxAv* toxAV, int callIndex, int peer)
 {
     qDebug() << "Created new call";
 
-    //setup audio output format as given by the caller
+    // setup audio output format as given by the caller
     ToxAvCSettings peerCodec;
     toxav_get_peer_csettings(m_toxAV, callIndex, peer, &peerCodec);
 
+    // start transmission
     toxav_prepare_transmission(m_toxAV, callIndex, av_jbufdc, av_VADd, peerCodec.call_type == TypeVideo ? 1 : 0);
 }
 
@@ -54,10 +55,10 @@ void ToxCall::startAudioOutput()
     toxav_get_peer_csettings(m_toxAV, m_callIndex, m_peer, &peerCodec);
 
     QAudioFormat outputFormat;
-    outputFormat.setSampleSize(16);
-    outputFormat.setSampleType(QAudioFormat::SignedInt);
-    outputFormat.setByteOrder(QAudioFormat::LittleEndian); // native
     outputFormat.setCodec("audio/pcm");
+    outputFormat.setSampleSize(16);
+    outputFormat.setSampleType(QAudioFormat::SignedInt); // int16
+    outputFormat.setByteOrder(QAudioFormat::LittleEndian); // native
     outputFormat.setSampleRate(peerCodec.audio_sample_rate);
     outputFormat.setChannelCount(peerCodec.audio_channels);
 
@@ -71,7 +72,7 @@ void ToxCall::startAudioOutput()
     m_audioDevice = m_audioOutput->start();
 }
 
-void ToxCall::writeAudio(const QByteArray &data)
+void ToxCall::outputAudio(const QByteArray &data)
 {
     if (m_audioDevice)
         m_audioDevice->write(data);
@@ -89,21 +90,23 @@ CoreAVModule::CoreAVModule(QObject* parent, Tox* tox, QMutex* mutex)
 {
     m_toxAV = toxav_new(tox, TOXAV_MAXCALLS);
 
+    // callbacks ---
     // audio & video
     toxav_register_audio_recv_callback(m_toxAV, callbackAudioRecv, this);
     toxav_register_video_recv_callback(m_toxAV, callbackVideoRecv, this);
 
-    // callstates
     // requests
     toxav_register_callstate_callback(m_toxAV, callbackAvInvite, av_OnInvite, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvStart, av_OnStart, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvCancel, av_OnCancel, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvReject, av_OnReject, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvEnd, av_OnEnd, this);
+
     // responses
     toxav_register_callstate_callback(m_toxAV, callbackAvOnRinging, av_OnRinging, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvOnStarting, av_OnStarting, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvOnEnding, av_OnEnding, this);
+
     // protocol
     toxav_register_callstate_callback(m_toxAV, callbackAvOnRequestTimeout, av_OnRequestTimeout, this);
     toxav_register_callstate_callback(m_toxAV, callbackAvOnPeerTimeout, av_OnPeerTimeout, this);
@@ -121,21 +124,18 @@ void CoreAVModule::update()
 
 void CoreAVModule::start()
 {
-    setAudioInput(QAudioDeviceInfo::defaultInputDevice());
-
-    m_audioTimer.setInterval(20);
-    m_audioTimer.setSingleShot(false);
-    connect(&m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout, Qt::DirectConnection);
-    m_audioTimer.start();
+    // set the default input source
+    setAudioInputSource();
 }
 
-void CoreAVModule::setAudioInput(QAudioDeviceInfo info)
+void CoreAVModule::setAudioInputSource(QAudioDeviceInfo info)
 {
+    // we might want to change the input device at runtime
     if (m_audioSource != nullptr)
         delete m_audioSource;
 
+    // input format (has to be pcm, int16, native endian)
     QAudioFormat format;
-
     format.setCodec("audio/pcm");
     format.setSampleRate(av_DefaultSettings.audio_sample_rate);
     format.setSampleSize(16);
@@ -149,12 +149,17 @@ void CoreAVModule::setAudioInput(QAudioDeviceInfo info)
         format = info.nearestFormat(format);
     }
 
+    // create input device
     m_audioSource = new QAudioInput(info, format, this);
-
-    m_audioSource->setVolume(1.0f);
-
     connect(m_audioSource, &QAudioInput::stateChanged, this, &CoreAVModule::onAudioInputStateChanged);
     m_audioInputDevice = m_audioSource->start();
+
+    // worker, feeds audio samples to tox/opus
+    m_audioTimer.disconnect();
+    m_audioTimer.setInterval(av_DefaultSettings.audio_frame_duration);
+    m_audioTimer.setSingleShot(false);
+    connect(&m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout, Qt::DirectConnection);
+    m_audioTimer.start();
 }
 
 void CoreAVModule::startCall(int friendnumber, bool withVideo)
@@ -181,7 +186,7 @@ void CoreAVModule::answerCall(int callIndex, bool withVideo)
     int ret = toxav_answer(m_toxAV, callIndex, &answerCodec);
     if (ret == 0)
     {
-        emit callAnswered(callIndex, toxav_get_peer_id(m_toxAV, callIndex, 0), withVideo);
+        emit callAnswered(callIndex, withVideo);
     } else
         qDebug() << "Answer Call Error: " << ret;
 }
@@ -239,18 +244,18 @@ void CoreAVModule::sendAudioFrame(int callIndex, const QByteArray& framedata, in
     if(call.isNull())
         return;
 
-    int maxFrameSize = frameSize * 64; //m_audioSource->format().bytesPerFrame();
+    int encBufferSize = framedata.size() * 2;
 
     //alloc more space if needed
-    if (m_encoderBuffer.size() < maxFrameSize)
-        m_encoderBuffer.resize(maxFrameSize);
+    if (m_encoderBuffer.size() < encBufferSize)
+        m_encoderBuffer.resize(encBufferSize);
 
     //https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
     int encodedFrameSize = toxav_prepare_audio_frame(m_toxAV, callIndex,
-                                              U8Ptr(m_encoderBuffer.data()),
-                                              m_encoderBuffer.size(),
-                                              reinterpret_cast<const int16_t*>(framedata.data()),
-                                              frameSize);
+                                                     U8Ptr(m_encoderBuffer.data()),
+                                                     m_encoderBuffer.size(),
+                                                     reinterpret_cast<const int16_t*>(framedata.data()),
+                                                     frameSize);
 
     if (frameSize > 0)
         toxav_send_audio(m_toxAV, callIndex, U8Ptr(m_encoderBuffer.data()), encodedFrameSize);
@@ -300,7 +305,7 @@ void CoreAVModule::callbackAudioRecv(ToxAv* toxAV, int32_t call_idx, int16_t* fr
     if (!call.isNull())
     {
         QByteArray samples = QByteArray(reinterpret_cast<char*>(frame), frame_size * sizeof(int16_t));
-        call->writeAudio(samples);
+        call->outputAudio(samples);
     }
 
     Q_UNUSED(toxAV)
@@ -320,6 +325,9 @@ void CoreAVModule::callbackAvInvite(void* agent, int32_t call_idx, void* arg)
     emit module->callInviteRcv(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
 
     qDebug() << "INVITE: " << call_idx << " id " << friendnumber << " video " << (settings.call_type == TypeVideo ? true : false);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvStart(void* agent, int32_t call_idx, void* arg)
@@ -334,35 +342,49 @@ void CoreAVModule::callbackAvStart(void* agent, int32_t call_idx, void* arg)
     emit module->callStarted(friendnumber, call_idx, settings.call_type == TypeVideo ? true : false);
 
     module->addNewCall(call_idx, 0);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvCancel(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
 
-    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
+    emit module->callStopped(call_idx);
 
     module->m_calls.remove(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvReject(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
 
-    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
+    emit module->callStopped(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvEnd(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
 
-    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
+    emit module->callStopped(call_idx);
 
     module->m_calls.remove(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnRinging(void* agent, int32_t call_idx, void* arg)
 {
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnStarting(void* agent, int32_t call_idx, void* arg)
@@ -371,6 +393,9 @@ void CoreAVModule::callbackAvOnStarting(void* agent, int32_t call_idx, void* arg
 
     auto module = static_cast<CoreAVModule*>(arg);
     module->addNewCall(call_idx, 0);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnEnding(void* agent, int32_t call_idx, void* arg)
@@ -378,23 +403,34 @@ void CoreAVModule::callbackAvOnEnding(void* agent, int32_t call_idx, void* arg)
     auto module = static_cast<CoreAVModule*>(arg);
     module->m_calls.remove(call_idx);
 
-    emit module->callStopped(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx);
+    emit module->callStopped(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnRequestTimeout(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
     module->m_calls.remove(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnPeerTimeout(void* agent, int32_t call_idx, void* arg)
 {
     auto module = static_cast<CoreAVModule*>(arg);
     module->m_calls.remove(call_idx);
+
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 void CoreAVModule::callbackAvOnMediaChange(void* agent, int32_t call_idx, void* arg)
 {
+    Q_UNUSED(agent)
+    Q_UNUSED(arg)
 }
 
 
