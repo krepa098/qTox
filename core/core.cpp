@@ -34,8 +34,9 @@
  * ====================*/
 
 Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
-    : QObject(nullptr) // Core must not be a child of coreThread
+    : QObject(nullptr)
     , m_tox(nullptr)
+    , m_ticker(nullptr)
     , m_lastConnStatus(false)
     , m_ipV6Enabled(enableIPv6)
     , m_dhtServers(dhtServers)
@@ -49,6 +50,7 @@ Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
     if (!metaTypesRegistered) {
         metaTypesRegistered = true;
         qRegisterMetaType<ToxFileTransferInfo>();
+        qRegisterMetaType<Status>();
     }
     // randomize the dht server list
     srand(QDateTime::currentDateTime().toTime_t());
@@ -56,6 +58,9 @@ Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
 
     // start tox
     initCore();
+
+    // ticker
+    m_ticker = new QTimer(this);
 
     // modules
     m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
@@ -74,10 +79,10 @@ Core::~Core()
 void Core::start()
 {
     qDebug() << "Core: start";
-    connect(&m_ticker, &QTimer::timeout, this, &Core::onTimeout, Qt::DirectConnection);
+    connect(m_ticker, &QTimer::timeout, this, &Core::onTimeout);
 
-    m_ticker.setSingleShot(false);
-    m_ticker.start(int(tox_do_interval(m_tox)));
+    m_ticker->setSingleShot(false);
+    m_ticker->start(int(tox_do_interval(m_tox)));
 
     m_ioModule->start();
     m_msgModule->start();
@@ -105,7 +110,7 @@ void Core::onTimeout()
     }
 
     // update interval
-    m_ticker.setInterval(qMax(1, int(tox_do_interval(m_tox))));
+    m_ticker->setInterval(qMax(1, int(tox_do_interval(m_tox))));
 }
 
 void Core::loadConfig(const QString& filename)

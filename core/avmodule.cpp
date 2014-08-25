@@ -18,6 +18,7 @@
 
 #include <QMutexLocker>
 #include <QDebug>
+#include <QThread>
 #include <tox/toxav.h>
 
 #define U8Ptr(x) reinterpret_cast<uint8_t*>(x)
@@ -101,12 +102,16 @@ QAudioFormat ToxCall::getAudioOutputFormat() const
 CoreAVModule::CoreAVModule(QObject* parent, Tox* tox, QMutex* mutex)
     : CoreModule(parent, tox, mutex)
     , m_toxAV(nullptr)
-    , m_audioSource(nullptr)
+    , m_audioInput(nullptr)
     , m_audioInputDevice(nullptr)
     , m_audioOutputDeviceInfo(QAudioDeviceInfo::defaultOutputDevice())
     , m_audioInputDeviceInfo(QAudioDeviceInfo::defaultInputDevice())
 {
+    // init libtox av
     m_toxAV = toxav_new(tox, TOXAV_MAXCALLS);
+
+    // create the audio timer
+    m_audioTimer = new QTimer(this);
 
     // callbacks ---
     // audio & video
@@ -138,6 +143,7 @@ CoreAVModule::~CoreAVModule()
 
 void CoreAVModule::update()
 {
+
 }
 
 void CoreAVModule::start()
@@ -149,42 +155,38 @@ void CoreAVModule::start()
 void CoreAVModule::setAudioInputSource(QAudioDeviceInfo info)
 {
     // we might want to change the input device at runtime
-    if (m_audioSource != nullptr)
-        delete m_audioSource;
+    if (m_audioInput != nullptr)
+        delete m_audioInput;
 
-    // input format (has to be pcm, int16, native endian)
-    QAudioFormat format;
-    format.setCodec("audio/pcm");
-    format.setSampleRate(av_DefaultSettings.audio_sample_rate);
-    format.setSampleSize(16);
-    format.setSampleType(QAudioFormat::SignedInt);
-    format.setByteOrder(QAudioFormat::LittleEndian);
-    format.setChannelCount(av_DefaultSettings.audio_channels);
-
-    if (!info.isFormatSupported(format))
-    {
-        qDebug() << "WARNING: Unsupported input format, using nearest";
-        format = info.nearestFormat(format);
-    }
+    // get a valid input format
+    if (!info.isFormatSupported(m_csettings.audioFormat))
+        qDebug() << "WARNING: Unsupported input format";
 
     // create input device
-    m_audioSource = new QAudioInput(info, format, this);
-    m_audioInputDevice = m_audioSource->start();
+    m_audioInput = new QAudioInput(info, m_csettings.audioFormat, this);
+    m_audioInputDevice = m_audioInput->start();
 
     // worker, feeds audio samples to tox/opus
-    m_audioTimer.disconnect();
-    m_audioTimer.setInterval(av_DefaultSettings.audio_frame_duration);
-    m_audioTimer.setSingleShot(false);
-    connect(&m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout, Qt::DirectConnection);
-    m_audioTimer.start();
+    m_audioTimer->disconnect();
+    m_audioTimer->setInterval(m_csettings.audioFrameDuration);
+    m_audioTimer->setSingleShot(false);
+    connect(m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout);
+    m_audioTimer->start();
 }
 
 void CoreAVModule::startCall(int friendnumber, bool withVideo)
 {
     QMutexLocker lock(coreMutex());
 
+    ToxAvCSettings toxCSettings;
+    toxCSettings.call_type = withVideo ? TypeVideo : TypeAudio;
+    toxCSettings.audio_bitrate = m_csettings.audioBitRate;
+    toxCSettings.audio_channels = m_csettings.audioFormat.channelCount();
+    toxCSettings.audio_frame_duration = m_csettings.audioFrameDuration;
+    toxCSettings.audio_sample_rate = m_csettings.audioFormat.sampleRate();
+
     int callIndex = 0;
-    int ret = toxav_call(m_toxAV, &callIndex, friendnumber, &av_DefaultSettings, TOXAV_RINGING_SECONDS);
+    int ret = toxav_call(m_toxAV, &callIndex, friendnumber, &toxCSettings, TOXAV_RINGING_SECONDS);
     if (ret == 0)
         emit callStarted(friendnumber, callIndex, withVideo);
     else
@@ -283,9 +285,9 @@ void CoreAVModule::onAudioTimerTimeout()
 {
     QMutexLocker lock(coreMutex());
 
-    int bytesPerFrame = m_audioSource->format().bytesForDuration(20*1000); // an opus frame ie. bytes for n ms of audio
-    int bytesReady = m_audioSource->bytesReady();
-    int opusFrameSize = bytesPerFrame / m_audioSource->format().bytesPerFrame();
+    int bytesPerFrame = m_audioInput->format().bytesForDuration(m_csettings.audioFrameDuration*1000); // an opus frame ie. bytes for n ms of audio
+    int bytesReady = m_audioInput->bytesReady();
+    int opusFrameSize = bytesPerFrame / m_audioInput->format().bytesPerFrame();
 
     if (bytesReady >= bytesPerFrame)
     {
@@ -304,6 +306,7 @@ void CoreAVModule::addNewCall(int callIndex, int peer)
     //create and insert the new call
     ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer, this));
     call->startAudioOutput(m_audioOutputDeviceInfo);
+    //call->moveToThread(thread());
 
     m_calls.insert(callIndex, call);
 }

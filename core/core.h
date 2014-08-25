@@ -42,7 +42,7 @@ class Core : public QObject
 {
     Q_OBJECT
 public:
-    explicit Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
+    Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
     ~Core();
 
     void loadConfig(const QString& filename);
@@ -70,7 +70,7 @@ protected:
 private:
     Tox* m_tox;
 
-    QTimer m_ticker;
+    QTimer* m_ticker;
 
     bool m_lastConnStatus;
     bool m_ipV6Enabled;

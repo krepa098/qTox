@@ -36,6 +36,36 @@
 
 typedef struct _ToxAv ToxAv;
 
+/********************
+ * ToxCodecSettings
+ ********************/
+
+struct ToxCodecSettings
+{
+    // default settings
+    ToxCodecSettings()
+        : audioFrameDuration(20)
+        , audioBitRate(64000)
+    {
+        audioFormat.setSampleRate(48000);
+        audioFormat.setChannelCount(1);
+
+        // do not modify
+        audioFormat.setCodec("audio/pcm");
+        audioFormat.setSampleSize(16);
+        audioFormat.setSampleType(QAudioFormat::SignedInt); // int16
+        audioFormat.setByteOrder(QAudioFormat::LittleEndian); // native
+    }
+
+    QAudioFormat audioFormat;
+    int audioFrameDuration; // ms
+    int audioBitRate; // bits/s
+};
+
+/********************
+ * ToxCall
+ ********************/
+
 class ToxCall : public QObject
 {
     Q_OBJECT
@@ -56,6 +86,10 @@ private:
     int m_peer;
     int m_state;
 };
+
+/********************
+ * CoreAVModule
+ ********************/
 
 class CoreAVModule : public CoreModule {
     Q_OBJECT
@@ -119,9 +153,13 @@ private:
     QMap<int, ToxCall::Ptr> m_calls;
     QByteArray m_encoderBuffer;
 
-    QAudioInput* m_audioSource;
+    // audio
+    QAudioInput* m_audioInput;
     QIODevice* m_audioInputDevice;
-    QTimer m_audioTimer;
+    QTimer* m_audioTimer;
+
+    // codec settings
+    ToxCodecSettings m_csettings;
 
     // sources/sinks
     QAudioDeviceInfo m_audioOutputDeviceInfo;
