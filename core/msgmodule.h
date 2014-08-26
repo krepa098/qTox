@@ -47,6 +47,8 @@ struct ToxGroupInfo {
     ToxPublicKey key;
 };
 
+Q_DECLARE_METATYPE(ToxGroupInfo)
+
 /********************
  * ToxGroup
  ********************/

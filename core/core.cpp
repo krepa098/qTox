@@ -51,6 +51,9 @@ Core::Core(bool enableIPv6, ToxProxy proxy, QList<ToxDhtServer> dhtServers)
 
         qRegisterMetaType<ToxFileTransferInfo>();
         qRegisterMetaType<ToxStatus>();
+        qRegisterMetaType<ToxPublicKey>();
+        qRegisterMetaType<ToxAddress>();
+        qRegisterMetaType<ToxGroupInfo>();
     }
 
     // randomize the dht server list

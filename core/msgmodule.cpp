@@ -125,6 +125,8 @@ int CoreMessengerModule::getNameMaxLength()
 
 void CoreMessengerModule::emitFriends()
 {
+    QMutexLocker lock(coreMutex());
+
     int count = tox_count_friendlist(tox());
     QVector<int> friendlist(count);
     tox_get_friendlist(tox(), friendlist.data(), count);
@@ -204,6 +206,8 @@ ToxAddress CoreMessengerModule::getUserAddress()
 
 void CoreMessengerModule::changeStatus(ToxStatus newStatus)
 {
+    QMutexLocker lock(coreMutex());
+
     if (m_oldStatus != newStatus) {
         m_oldStatus = newStatus;
         emit statusChanged(newStatus);
@@ -281,7 +285,8 @@ void CoreMessengerModule::sendGroupInvite(int friendnumber, int groupnumber)
 {
     QMutexLocker lock(coreMutex());
 
-    tox_invite_friend(tox(), friendnumber, groupnumber);
+    if (tox_invite_friend(tox(), friendnumber, groupnumber) != 0)
+        qDebug() << "Cannot invite friend to group";
 }
 
 void CoreMessengerModule::createGroup()

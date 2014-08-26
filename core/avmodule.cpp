@@ -186,7 +186,7 @@ void CoreAVModule::startCall(int friendnumber, bool withVideo)
     int callIndex = 0;
     int ret = toxav_call(m_toxAV, &callIndex, friendnumber, &toxCSettings, TOXAV_RINGING_SECONDS);
     if (ret == 0)
-        emit callStarted(friendnumber, callIndex, withVideo);
+        ;//emit callStarted(friendnumber, callIndex, withVideo);
     else
         qDebug() << "AV: Start Call Error: " << ret;
 }
@@ -324,15 +324,16 @@ void CoreAVModule::addNewCall(int callIndex, int peer)
     //create and insert the new call
     ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer, this));
     call->startAudioOutput(m_audioOutputDeviceInfo);
-    //call->moveToThread(thread());
+
+    emit callStarted(callIndex, false);
 
     m_calls.insert(callIndex, call);
 }
 
 /*************************************************
  * CALLBACKS
- * Note:    they are exectuted in a
- *          different thread than CoreAVModule
+ * Note:    execution takes place in a
+ *          thread created by toxAV
  *************************************************/
 
 void CoreAVModule::callbackAudioRecv(ToxAv* toxAV, int32_t call_idx, int16_t* frame, int frame_size, void* userdata)
@@ -409,6 +410,10 @@ void CoreAVModule::callbackAvEnd(void* agent, int32_t call_idx, void* arg)
 void CoreAVModule::callbackAvOnRinging(void* agent, int32_t call_idx, void* arg)
 {
     qDebug() << "RING RING ...";
+
+    auto module = static_cast<CoreAVModule*>(arg);
+    emit module->callRinging(toxav_get_peer_id(module->m_toxAV, call_idx, 0), call_idx, false);
+
     Q_UNUSED(agent)
     Q_UNUSED(arg)
 }

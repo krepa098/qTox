@@ -63,7 +63,7 @@ public slots:
     void addNewFileTransfer(ToxFileTransferInfo trans);
     void onFileTransferRequest(ToxFileTransferInfo info);
     void onAvInvite(int FriendId, int CallId, bool video);
-    void onAvStart(int FriendId, int CallId, bool video);
+    void onAvStart(int CallId, bool video);
     void onAvCancel(int CallId);
     void onAvEnd(int CallId);
     void onAvRinging(int FriendId, int CallId, bool video);

@@ -104,10 +104,11 @@ public:
 
 signals:
     // local user
-    void callStarted(int friendnumber, int callIndex, bool withVideo);
+    void callStarted(int callIndex, bool withVideo);
     void callAnswered(int callIndex, bool withVideo);
     void callHungup(int callIndex);
     void callStopped(int callIndex);
+    void callRinging(int friendnumber, int callIndex, bool withVideo);
 
     void callInviteRcv(int friendnumber, int callIndex, bool withVideo);
 

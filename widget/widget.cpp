@@ -442,6 +442,7 @@ void Widget::addFriend(int friendId, const QString &userId)
     connect(core->avModule(), &CoreAVModule::callInviteRcv, newfriend->chatForm, &ChatForm::onAvInvite);
     connect(core->avModule(), &CoreAVModule::callStopped, newfriend->chatForm, &ChatForm::onAvCancel);
     connect(core->avModule(), &CoreAVModule::callStarted, newfriend->chatForm, &ChatForm::onAvStart);
+    connect(core->avModule(), &CoreAVModule::callRinging, newfriend->chatForm, &ChatForm::onAvRinging);
     //    connect(core, &Core::avStarting, newfriend->chatForm, &ChatForm::onAvStarting);
     //    connect(core, &Core::avEnding, newfriend->chatForm, &ChatForm::onAvEnding);
     //    connect(core, &Core::avRequestTimeout, newfriend->chatForm, &ChatForm::onAvRequestTimeout);

@@ -351,9 +351,9 @@ void ChatForm::onAvInvite(int FriendId, int CallId, bool video)
     }
 }
 
-void ChatForm::onAvStart(int FriendId, int CallId, bool video)
+void ChatForm::onAvStart(int CallId, bool video)
 {
-    if (FriendId != f->friendId)
+    if (callId != CallId)
         return;
     callId = CallId;
     callButton->disconnect();
