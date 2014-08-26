@@ -60,6 +60,7 @@ public:
     bool isFriendWidgetCurActiveWidget(Friend* f);
     void updateFriendStatusLights(int friendId);
     ~Widget();
+    void postInit();
 
     virtual void closeEvent(QCloseEvent *event);
 

@@ -212,9 +212,6 @@ Widget::Widget(QWidget *parent)
     connect(setStatusAway, SIGNAL(triggered()), this, SLOT(setStatusAway()));
     connect(setStatusBusy, SIGNAL(triggered()), this, SLOT(setStatusBusy()));
 
-    //start core
-    coreThread->start();
-
     friendForm.show(*ui);
     isFriendWidgetActive = 0;
     isGroupWidgetActive = 0;
@@ -237,6 +234,12 @@ Widget::~Widget()
         delete g;
     GroupList::groupList.clear();
     delete ui;
+}
+
+void Widget::postInit()
+{
+    //start core
+    coreThread->start();
 }
 
 Widget* Widget::getInstance()

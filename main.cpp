@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
     QFontDatabase::addApplicationFont("://DejaVuSans.ttf");
 
     Widget* w = Widget::getInstance();
+    w->postInit();
     w->show();
 
     int errorcode = a.exec();

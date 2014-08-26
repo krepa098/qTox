@@ -122,6 +122,8 @@ public slots:
 
 private slots:
     void onAudioTimerTimeout();
+    void writeCallAudio(int callIndex, int16_t* frame, int frameSize);
+    void removeCall(int callIndex);
 
 protected:
     void addNewCall(int callIndex, int peer);
