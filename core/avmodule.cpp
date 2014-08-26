@@ -48,7 +48,6 @@ ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject *parent)
 ToxCall::~ToxCall()
 {
     qDebug() << "Delete call";
-    toxav_kill_transmission(m_toxAV, m_callIndex);
 }
 
 void ToxCall::startAudioOutput(QAudioDeviceInfo info)
@@ -112,6 +111,7 @@ CoreAVModule::CoreAVModule(Tox* tox, QMutex* mutex, QObject* parent)
 
     // create the audio timer
     m_audioTimer = new QTimer(this);
+    connect(m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout);
 
     // callbacks ---
     // audio & video
@@ -167,10 +167,8 @@ void CoreAVModule::setAudioInputSource(QAudioDeviceInfo info)
     m_audioInputDevice = m_audioInput->start();
 
     // worker, feeds audio samples to tox/opus
-    m_audioTimer->disconnect();
     m_audioTimer->setInterval(m_csettings.audioFrameDuration);
     m_audioTimer->setSingleShot(false);
-    connect(m_audioTimer, &QTimer::timeout, this, &CoreAVModule::onAudioTimerTimeout);
     m_audioTimer->start();
 }
 

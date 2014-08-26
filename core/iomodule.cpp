@@ -31,29 +31,32 @@
  * ToxFileTransfer
  ********************/
 
-ToxFileTransfer::Ptr ToxFileTransfer::createSending(int friendNbr, int fileNbr, QString filename)
+ToxFileTransfer::Ptr ToxFileTransfer::createSending(int friendNbr, int fileNbr, QString filename, QObject *parent)
 {
-    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, -1, ToxFileTransferInfo::Sending));
+    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, -1, ToxFileTransferInfo::Sending, parent));
 }
 
-ToxFileTransfer::Ptr ToxFileTransfer::createReceiving(int friendNbr, int fileNbr, QString filename, qint64 totalSize)
+ToxFileTransfer::Ptr ToxFileTransfer::createReceiving(int friendNbr, int fileNbr, QString filename, qint64 totalSize, QObject *parent)
 {
-    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, totalSize, ToxFileTransferInfo::Receiving));
+    return Ptr(new ToxFileTransfer(friendNbr, fileNbr, filename, totalSize, ToxFileTransferInfo::Receiving, parent));
 }
 
-ToxFileTransfer::ToxFileTransfer(int friendNbr, int fileNbr, QString filename, qint64 totalSize, ToxFileTransferInfo::Direction dir)
-    : valid(false)
+ToxFileTransfer::ToxFileTransfer(int friendNbr, int fileNbr, QString filename, qint64 totalSize, ToxFileTransferInfo::Direction dir, QObject *parent)
+    : QObject(parent)
+    , m_valid(false)
 {
+    m_file = new QFile(this);
+
     if (dir == ToxFileTransferInfo::Sending) {
-        file.setFileName(filename);
+        m_file->setFileName(filename);
 
-        if (file.open(QFile::ReadOnly)) {
-            valid = true;
+        if (m_file->open(QFile::ReadOnly)) {
+            m_valid = true;
 
-            info = ToxFileTransferInfo(friendNbr, fileNbr, QFileInfo(filename).fileName(), QFileInfo(filename).absoluteFilePath(), file.size(), dir);
+            m_info = ToxFileTransferInfo(friendNbr, fileNbr, QFileInfo(filename).fileName(), QFileInfo(filename).absoluteFilePath(), m_file->size(), dir);
         }
     } else {
-        info = ToxFileTransferInfo(friendNbr, fileNbr, filename, QString(), totalSize, dir);
+        m_info = ToxFileTransferInfo(friendNbr, fileNbr, filename, QString(), totalSize, dir);
     }
 }
 
@@ -64,51 +67,51 @@ ToxFileTransfer::~ToxFileTransfer()
 
 void ToxFileTransfer::setStatus(ToxFileTransferInfo::Status status)
 {
-    info.status = status;
+    m_info.status = status;
 }
 
 void ToxFileTransfer::setDestination(const QString& path)
 {
-    if (info.direction == ToxFileTransferInfo::Receiving) {
-        info.filePath = path + '/' + info.fileName;
-        file.setFileName(info.filePath);
-        valid = file.open(QFile::WriteOnly | QFile::Truncate);
+    if (m_info.direction == ToxFileTransferInfo::Receiving) {
+        m_info.filePath = path + '/' + m_info.fileName;
+        m_file->setFileName(m_info.filePath);
+        m_valid = m_file->open(QFile::WriteOnly | QFile::Truncate);
     }
 }
 
 void ToxFileTransfer::flush()
 {
-    file.flush();
+    m_file->flush();
 }
 
 ToxFileTransferInfo ToxFileTransfer::getInfo()
 {
-    return info;
+    return m_info;
 }
 
 bool ToxFileTransfer::isValid() const
 {
-    return valid;
+    return m_valid;
 }
 
 QByteArray ToxFileTransfer::read(qint64 offset, qint64 maxLen)
 {
-    file.seek(offset);
-    QByteArray data = file.read(maxLen);
-    info.transmittedBytes += data.size();
+    m_file->seek(offset);
+    QByteArray data = m_file->read(maxLen);
+    m_info.transmittedBytes += data.size();
 
     return data;
 }
 
 void ToxFileTransfer::unread(qint64 len)
 {
-    info.transmittedBytes -= len;
+    m_info.transmittedBytes -= len;
 }
 
 void ToxFileTransfer::write(const QByteArray& data)
 {
-    info.transmittedBytes += data.size();
-    file.write(data);
+    m_info.transmittedBytes += data.size();
+    m_file->write(data);
 }
 
 /********************
@@ -182,7 +185,7 @@ void CoreIOModule::sendFile(int friendnumber, QString filePath)
     if (info.isReadable()) {
         int filenumber = tox_new_file_sender(tox(), friendnumber, info.size(), U8Ptr(info.fileName().toUtf8().data()), info.fileName().toUtf8().size());
         if (filenumber >= 0) {
-            ToxFileTransfer::Ptr trans = ToxFileTransfer::createSending(friendnumber, filenumber, filePath);
+            ToxFileTransfer::Ptr trans = ToxFileTransfer::createSending(friendnumber, filenumber, filePath, this);
             emit fileTransferRequested(trans->getInfo());
             m_fileTransfers.insert(filenumber, trans);
             qDebug() << "New file sender " << filenumber;
@@ -331,7 +334,7 @@ void CoreIOModule::callbackFileSendRequest(Tox* tox, int32_t friendnumber, uint8
     CoreIOModule* module = static_cast<CoreIOModule*>(userdata);
 
     QString file = CoreHelpers::stringFromToxUTF8(filename, filename_length);
-    ToxFileTransfer::Ptr trans = ToxFileTransfer::createReceiving(friendnumber, filenumber, file, filesize);
+    ToxFileTransfer::Ptr trans = ToxFileTransfer::createReceiving(friendnumber, filenumber, file, filesize, module);
 
     module->m_fileTransfers.insert(filenumber, trans);
     emit module->fileTransferRequested(trans->getInfo());

@@ -87,13 +87,14 @@ Q_DECLARE_METATYPE(ToxFileTransferInfo)
  * ToxFileTransfer
  ********************/
 
-class ToxFileTransfer
+class ToxFileTransfer : public QObject
 {
+    Q_OBJECT
 public:
     using Ptr = QSharedPointer<ToxFileTransfer>;
 
-    static Ptr createSending(int friendNbr, int fileNbr, QString filename);
-    static Ptr createReceiving(int friendNbr, int fileNbr, QString filename, qint64 totalSize);
+    static Ptr createSending(int friendNbr, int fileNbr, QString filename, QObject* parent);
+    static Ptr createReceiving(int friendNbr, int fileNbr, QString filename, qint64 totalSize, QObject* parent);
 
     ~ToxFileTransfer();
 
@@ -109,12 +110,12 @@ public:
     void write(const QByteArray& data);
 
 protected:
-    ToxFileTransfer(int friendNbr, int fileNbr, QString filename, qint64 totalSize, ToxFileTransferInfo::Direction dir);
+    ToxFileTransfer(int friendNbr, int fileNbr, QString filename, qint64 totalSize, ToxFileTransferInfo::Direction dir, QObject* parent);
 
 private:
-    QFile file;
-    ToxFileTransferInfo info;
-    bool valid;
+    QFile* m_file;
+    ToxFileTransferInfo m_info;
+    bool m_valid;
 };
 
 /********************

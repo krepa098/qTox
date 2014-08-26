@@ -62,6 +62,8 @@ Core::Core(bool enableIPv6, ToxProxy proxy, QList<ToxDhtServer> dhtServers)
 
     // ticker
     m_ticker = new QTimer(this);
+    m_ticker->setSingleShot(false);
+    connect(m_ticker, &QTimer::timeout, this, &Core::onTimeout);
 
     // modules
     m_ioModule = new CoreIOModule(m_tox, &m_mutex, this);
@@ -80,16 +82,14 @@ Core::~Core()
 void Core::start()
 {
     qDebug() << "Core: start";
-    connect(m_ticker, &QTimer::timeout, this, &Core::onTimeout);
-
-    m_ticker->setSingleShot(false);
-    m_ticker->start(int(tox_do_interval(m_tox)));
 
     m_ioModule->start();
     m_msgModule->start();
     m_avModule->start();
 
     bootstrap();
+
+    m_ticker->start(int(tox_do_interval(m_tox)));
 }
 
 void Core::onTimeout()
