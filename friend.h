@@ -37,7 +37,7 @@ public:
     QString userId;
     ChatForm* chatForm;
     int hasNewMessages;
-    Status friendStatus;
+    ToxStatus friendStatus;
     QPixmap avatar;
 };
 

@@ -30,6 +30,31 @@
 
 struct Tox;
 
+/********************
+ * ToxDhtServer
+ ********************/
+
+struct ToxProxy
+{
+    ToxProxy()
+        : port(0)
+        , disableUDP(false)
+    {}
+
+    bool enabled()
+    {
+        return !address.isEmpty();
+    }
+
+    QString address;
+    quint16 port;
+    bool disableUDP;
+};
+
+/********************
+ * ToxDhtServer
+ ********************/
+
 struct ToxDhtServer
 {
     QString name;
@@ -38,11 +63,15 @@ struct ToxDhtServer
     ToxPublicKey publicKey;
 };
 
+/********************
+ * Core
+ ********************/
+
 class Core : public QObject
 {
     Q_OBJECT
 public:
-    Core(bool enableIPv6, QList<ToxDhtServer> dhtServers);
+    Core(bool enableIPv6, ToxProxy proxy, QList<ToxDhtServer> dhtServers);
     ~Core();
 
     void loadConfig(const QString& filename);
@@ -63,7 +92,7 @@ private slots:
 
 protected:
     // tox helpers
-    void initCore();
+    void initCore(bool IPv6, ToxProxy proxy);
     void bootstrap();
     bool isConnected();
 
@@ -73,7 +102,6 @@ private:
     QTimer* m_ticker;
 
     bool m_lastConnStatus;
-    bool m_ipV6Enabled;
     QList<ToxDhtServer> m_dhtServers;
 
     CoreIOModule* m_ioModule;

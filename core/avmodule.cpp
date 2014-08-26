@@ -99,7 +99,7 @@ QAudioFormat ToxCall::getAudioOutputFormat() const
  * CoreAVModule
  ********************/
 
-CoreAVModule::CoreAVModule(QObject* parent, Tox* tox, QMutex* mutex)
+CoreAVModule::CoreAVModule(Tox* tox, QMutex* mutex, QObject* parent)
     : CoreModule(parent, tox, mutex)
     , m_toxAV(nullptr)
     , m_audioInput(nullptr)

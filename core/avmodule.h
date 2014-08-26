@@ -94,7 +94,7 @@ private:
 class CoreAVModule : public CoreModule {
     Q_OBJECT
 public:
-    CoreAVModule(QObject* parent, Tox* tox, QMutex* mutex);
+    CoreAVModule(Tox* tox, QMutex* mutex, QObject* parent);
     ~CoreAVModule();
 
     void update();

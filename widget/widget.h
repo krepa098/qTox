@@ -66,8 +66,8 @@ public:
 signals:
     void friendRequestAccepted(const ToxPublicKey& userId);
     void friendRequested(const QString& friendAddress, const QString& message);
-    void statusSet(Status status);
-    void statusSelected(Status status);
+    void statusSet(ToxStatus status);
+    void statusSelected(ToxStatus status);
     void usernameChanged(const QString& username);
     void statusMessageChanged(const QString& statusMessage);
 
@@ -76,7 +76,7 @@ private slots:
     void minimizeBtnClicked();
     void onConnected();
     void onDisconnected();
-    void onStatusSet(Status status);
+    void onStatusSet(ToxStatus status);
     void onAddClicked();
     void onGroupClicked();
     void onTransferClicked();
@@ -90,7 +90,7 @@ private slots:
     void setStatusMessage(const QString &statusMessage);
     void addFriend(int friendId, const QString& userId);
     void addFriendFailed(const QString& userId);
-    void onFriendStatusChanged(int friendId, Status status);
+    void onFriendStatusChanged(int friendId, ToxStatus status);
     void onFriendStatusMessageChanged(int friendId, const QString& message);
     void onFriendUsernameChanged(int friendId, const QString& username);
     void onFriendStatusMessageLoaded(int friendId, const QString& message);

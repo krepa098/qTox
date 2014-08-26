@@ -115,7 +115,7 @@ void ToxFileTransfer::write(const QByteArray& data)
  * CoreFileModule
  ********************/
 
-CoreIOModule::CoreIOModule(QObject* parent, Tox* tox, QMutex* mutex)
+CoreIOModule::CoreIOModule(Tox* tox, QMutex* mutex, QObject* parent)
     : CoreModule(parent, tox, mutex)
 {
     // setup callbacks

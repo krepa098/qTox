@@ -22,7 +22,11 @@
 #include "module.h"
 #include "helpers.h"
 
-enum class Status : int
+/********************
+ * ToxStatus
+ ********************/
+
+enum class ToxStatus : int
 {
     Online = 0,
     Away,
@@ -30,7 +34,11 @@ enum class Status : int
     Offline
 };
 
-Q_DECLARE_METATYPE(Status)
+Q_DECLARE_METATYPE(ToxStatus)
+
+/********************
+ * ToxGroupInfo
+ ********************/
 
 struct ToxGroupInfo {
     int number;
@@ -39,6 +47,10 @@ struct ToxGroupInfo {
     ToxPublicKey key;
 };
 
+/********************
+ * ToxGroup
+ ********************/
+
 struct ToxGroup {
     ToxGroup(int groupnumber);
     bool update(Tox* tox);
@@ -46,10 +58,14 @@ struct ToxGroup {
     ToxGroupInfo info;
 };
 
+/********************
+ * CoreMessengerModule
+ ********************/
+
 class CoreMessengerModule : public CoreModule {
     Q_OBJECT
 public:
-    CoreMessengerModule(QObject* parent, Tox* tox, QMutex* mutex);
+    CoreMessengerModule(Tox* tox, QMutex* mutex, QObject* parent);
     void update();
     void start();
 
@@ -57,7 +73,7 @@ public:
 
     ToxAddress getUserAddress();
     QString getUsername();
-    Status getUserStatus();
+    ToxStatus getUserStatus();
 
     void setUsername(const QString& username);
 
@@ -65,11 +81,11 @@ signals:
     // user
     void usernameChanged(QString username);
     void userStatusMessageChanged(QString msg);
-    void statusChanged(Status status);
+    void statusChanged(ToxStatus status);
 
     // friends
     void friendAdded(int friendnumber, QString username);
-    void friendStatusChanged(int friendnumber, Status status);
+    void friendStatusChanged(int friendnumber, ToxStatus status);
     void friendStatusMessageChanged(int friendnumber, QString msg);
     void friendUsernameChanged(int friendnumber, QString newName);
     void friendRequestReceived(ToxPublicKey publicKey, QString msg);
@@ -92,7 +108,7 @@ signals:
 public slots:
     // user
     void setUserStatusMessage(QString msg);
-    void setUserStatus(Status newStatus);
+    void setUserStatus(ToxStatus newStatus);
 
     // friends
     void acceptFriendRequest(ToxPublicKey friendAddress);
@@ -127,11 +143,11 @@ protected:
     void emitFriends();
     void emitUserStatusMessage();
 
-    void changeStatus(Status newStatus);
+    void changeStatus(ToxStatus newStatus);
 
 private:
     QMap<int, ToxGroup> m_groups;
-    Status m_oldStatus;
+    ToxStatus m_oldStatus;
 };
 
 #endif // MSGMODULE_H

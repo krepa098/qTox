@@ -33,12 +33,11 @@
  * CORE
  * ====================*/
 
-Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
+Core::Core(bool enableIPv6, ToxProxy proxy, QList<ToxDhtServer> dhtServers)
     : QObject(nullptr)
     , m_tox(nullptr)
     , m_ticker(nullptr)
     , m_lastConnStatus(false)
-    , m_ipV6Enabled(enableIPv6)
     , m_dhtServers(dhtServers)
     , m_ioModule(nullptr)
     , m_msgModule(nullptr)
@@ -49,23 +48,25 @@ Core::Core(bool enableIPv6, QList<ToxDhtServer> dhtServers)
     static bool metaTypesRegistered = false;
     if (!metaTypesRegistered) {
         metaTypesRegistered = true;
+
         qRegisterMetaType<ToxFileTransferInfo>();
-        qRegisterMetaType<Status>();
+        qRegisterMetaType<ToxStatus>();
     }
+
     // randomize the dht server list
     srand(QDateTime::currentDateTime().toTime_t());
     std::random_shuffle(m_dhtServers.begin(), m_dhtServers.end());
 
     // start tox
-    initCore();
+    initCore(enableIPv6, proxy);
 
     // ticker
     m_ticker = new QTimer(this);
 
     // modules
-    m_ioModule = new CoreIOModule(this, m_tox, &m_mutex);
-    m_msgModule = new CoreMessengerModule(this, m_tox, &m_mutex);
-    m_avModule = new CoreAVModule(this, m_tox, &m_mutex);
+    m_ioModule = new CoreIOModule(m_tox, &m_mutex, this);
+    m_msgModule = new CoreMessengerModule(m_tox, &m_mutex, this);
+    m_avModule = new CoreAVModule(m_tox, &m_mutex, this);
 }
 
 Core::~Core()
@@ -110,6 +111,7 @@ void Core::onTimeout()
     }
 
     // update interval
+    // tox may decide we need to update more frequently (like during file transfers)
     m_ticker->setInterval(qMax(1, int(tox_do_interval(m_tox))));
 }
 
@@ -153,14 +155,19 @@ CoreAVModule *Core::avModule()
     return m_avModule;
 }
 
-void Core::initCore()
+void Core::initCore(bool IPv6, ToxProxy proxy)
 {
     QMutexLocker lock(&m_mutex);
 
+    // configure
     Tox_Options options;
-    options.ipv6enabled = m_ipV6Enabled ? 1 : 0;
-    options.udp_disabled = 0;
-    options.proxy_enabled = 0;
+    options.ipv6enabled = IPv6 ? 1 : 0;
+    options.udp_disabled = proxy.disableUDP ? 1 : 0;
+    options.proxy_enabled = proxy.enabled() ? 1 : 0;
+    options.proxy_port = proxy.port;
+
+    if (proxy.address.toLatin1().size() < 256)
+        memcpy((void*)options.proxy_address, (void*)proxy.address.toLatin1().data(), proxy.address.toLatin1().size());
 
     if ((m_tox = tox_new(&options)) == nullptr)
         qCritical() << "tox_new: Cannot initialize core";

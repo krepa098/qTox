@@ -159,7 +159,7 @@ Widget::Widget(QWidget *parent)
 
     // create core in background thread
     coreThread = new QThread();
-    core = new Core(Settings::getInstance().getEnableIPv6(), Settings::getInstance().getDhtServerList());
+    core = new Core(Settings::getInstance().getEnableIPv6(), ToxProxy(), Settings::getInstance().getDhtServerList());
     core->loadConfig(Settings::getSettingsDirPath() + '/' + TOX_CONFIG_FILE_NAME);
 
     // connect core to core thread
@@ -271,12 +271,12 @@ Camera* Widget::getCamera()
 
 void Widget::onConnected()
 {
-    emit statusSet(Status::Online);
+    emit statusSet(ToxStatus::Online);
 }
 
 void Widget::onDisconnected()
 {
-    emit statusSet(Status::Offline);
+    emit statusSet(ToxStatus::Offline);
 }
 
 void Widget::onFailedToStartCore()
@@ -288,26 +288,26 @@ void Widget::onFailedToStartCore()
     qApp->quit();
 }
 
-void Widget::onStatusSet(Status status)
+void Widget::onStatusSet(ToxStatus status)
 {
     //We have to use stylesheets here, there's no way to
     //prevent the button icon from moving when pressed otherwise
-    if (status == Status::Online)
+    if (status == ToxStatus::Online)
     {
         ui->statusButton->setObjectName("online");
         ui->statusButton->style()->polish(ui->statusButton);
     }
-    else if (status == Status::Away)
+    else if (status == ToxStatus::Away)
     {
         ui->statusButton->setObjectName("away");
         ui->statusButton->style()->polish(ui->statusButton);
     }
-    else if (status == Status::Busy)
+    else if (status == ToxStatus::Busy)
     {
         ui->statusButton->setObjectName("busy");
         ui->statusButton->style()->polish(ui->statusButton);
     }
-    else if (status == Status::Offline)
+    else if (status == ToxStatus::Offline)
     {
         ui->statusButton->setObjectName("offline");
         ui->statusButton->style()->polish(ui->statusButton);
@@ -398,7 +398,7 @@ void Widget::onStatusMessageChanged(const QString& newStatusMessage, const QStri
 
 void Widget::onConnectionStatusChanged(bool connected)
 {
-    onStatusSet(connected ? core->msgModule()->getUserStatus() : Status::Offline);
+    onStatusSet(connected ? core->msgModule()->getUserStatus() : ToxStatus::Offline);
 }
 
 void Widget::setStatusMessage(const QString &statusMessage)
@@ -454,7 +454,7 @@ void Widget::addFriendFailed(const QString&)
     QMessageBox::critical(0,"Error","Couldn't request friendship");
 }
 
-void Widget::onFriendStatusChanged(int friendId, Status status)
+void Widget::onFriendStatusChanged(int friendId, ToxStatus status)
 {
     Friend* f = FriendList::findFriend(friendId);
     if (!f)
@@ -552,22 +552,22 @@ void Widget::onFriendMessageReceived(int friendId, const QString& message)
 void Widget::updateFriendStatusLights(int friendId)
 {
     Friend* f = FriendList::findFriend(friendId);
-    Status status = f->friendStatus;
-    if (status == Status::Online && f->hasNewMessages == 0)
+    ToxStatus status = f->friendStatus;
+    if (status == ToxStatus::Online && f->hasNewMessages == 0)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online.png"));
-    else if (status == Status::Online && f->hasNewMessages == 1)
+    else if (status == ToxStatus::Online && f->hasNewMessages == 1)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_online_notification.png"));
-    else if (status == Status::Away && f->hasNewMessages == 0)
+    else if (status == ToxStatus::Away && f->hasNewMessages == 0)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_idle.png"));
-    else if (status == Status::Away && f->hasNewMessages == 1)
+    else if (status == ToxStatus::Away && f->hasNewMessages == 1)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_idle_notification.png"));
-    else if (status == Status::Busy && f->hasNewMessages == 0)
+    else if (status == ToxStatus::Busy && f->hasNewMessages == 0)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_busy.png"));
-    else if (status == Status::Busy && f->hasNewMessages == 1)
+    else if (status == ToxStatus::Busy && f->hasNewMessages == 1)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_busy_notification.png"));
-    else if (status == Status::Offline && f->hasNewMessages == 0)
+    else if (status == ToxStatus::Offline && f->hasNewMessages == 0)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_away.png"));
-    else if (status == Status::Offline && f->hasNewMessages == 1)
+    else if (status == ToxStatus::Offline && f->hasNewMessages == 1)
         f->widget->statusPic.setPixmap(QPixmap(":img/status/dot_away_notification.png"));
 }
 
@@ -1152,17 +1152,17 @@ void Widget::minimizeBtnClicked()
 
 void Widget::setStatusOnline()
 {
-    core->msgModule()->setUserStatus(Status::Online);
+    core->msgModule()->setUserStatus(ToxStatus::Online);
 }
 
 void Widget::setStatusAway()
 {
-    core->msgModule()->setUserStatus(Status::Away);
+    core->msgModule()->setUserStatus(ToxStatus::Away);
 }
 
 void Widget::setStatusBusy()
 {
-    core->msgModule()->setUserStatus(Status::Busy);
+    core->msgModule()->setUserStatus(ToxStatus::Busy);
 }
 
 bool Widget::eventFilter(QObject *, QEvent *event)

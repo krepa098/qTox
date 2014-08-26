@@ -27,20 +27,20 @@
  * MAPPING
  ********************/
 
-Status mapStatus(uint8_t toxStatus)
+ToxStatus mapStatus(uint8_t toxStatus)
 {
     switch (toxStatus) {
     case TOX_USERSTATUS_NONE:
-        return Status::Online;
+        return ToxStatus::Online;
     case TOX_USERSTATUS_AWAY:
-        return Status::Away;
+        return ToxStatus::Away;
     case TOX_USERSTATUS_BUSY:
-        return Status::Busy;
+        return ToxStatus::Busy;
     case TOX_USERSTATUS_INVALID:
-        return Status::Offline;
+        return ToxStatus::Offline;
     }
 
-    return Status::Offline;
+    return ToxStatus::Offline;
 }
 
 /********************
@@ -83,9 +83,9 @@ bool ToxGroup::update(Tox* tox)
  * CoreMessagingModule
  ********************/
 
-CoreMessengerModule::CoreMessengerModule(QObject* parent, Tox* tox, QMutex* mutex)
+CoreMessengerModule::CoreMessengerModule(Tox* tox, QMutex* mutex, QObject* parent)
     : CoreModule(parent, tox, mutex),
-      m_oldStatus(Status::Online)
+      m_oldStatus(ToxStatus::Online)
 {
     // setup callbacks
     tox_callback_friend_request(tox, callbackFriendRequest, this);
@@ -175,7 +175,7 @@ QString CoreMessengerModule::getUsername()
     return "nil";
 }
 
-Status CoreMessengerModule::getUserStatus()
+ToxStatus CoreMessengerModule::getUserStatus()
 {
     return mapStatus(tox_get_self_user_status(tox()));
 }
@@ -202,7 +202,7 @@ ToxAddress CoreMessengerModule::getUserAddress()
     return address;
 }
 
-void CoreMessengerModule::changeStatus(Status newStatus)
+void CoreMessengerModule::changeStatus(ToxStatus newStatus)
 {
     if (m_oldStatus != newStatus) {
         m_oldStatus = newStatus;
@@ -252,7 +252,7 @@ void CoreMessengerModule::setUserStatusMessage(QString msg)
     }
 }
 
-void CoreMessengerModule::setUserStatus(Status newStatus)
+void CoreMessengerModule::setUserStatus(ToxStatus newStatus)
 {
     QMutexLocker lock(coreMutex());
 
@@ -379,7 +379,7 @@ void CoreMessengerModule::callbackConnectionStatus(Tox* tox, int32_t friendnumbe
     Q_UNUSED(tox)
 
     CoreMessengerModule* module = static_cast<CoreMessengerModule*>(userdata);
-    emit module->friendStatusChanged(friendnumber, status == 1 ? Status::Online : Status::Offline);
+    emit module->friendStatusChanged(friendnumber, status == 1 ? ToxStatus::Online : ToxStatus::Offline);
 
     qDebug() << "Connection status changed " << friendnumber << status;
 }

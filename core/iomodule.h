@@ -125,7 +125,7 @@ class CoreIOModule : public CoreModule
 {
     Q_OBJECT
 public:
-    CoreIOModule(QObject* parent, Tox* tox, QMutex* mutex);
+    CoreIOModule(Tox* tox, QMutex* mutex, QObject* parent);
     void update();
     void start();
 
