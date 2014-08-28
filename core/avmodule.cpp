@@ -27,15 +27,14 @@
  * ToxCall
  ********************/
 
-ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject *parent)
-    : QObject(parent)
-    , m_toxAV(toxAV)
+ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer)
+    : m_toxAV(toxAV)
     , m_audioOutput(nullptr)
     , m_audioDevice(nullptr)
     , m_callIndex(callIndex)
     , m_peer(peer)
 {
-    qDebug() << "Created new call";
+    qDebug() << "Created new call " << callIndex;
 
     // setup audio output format as given by the caller
     ToxAvCSettings peerCodec;
@@ -48,12 +47,13 @@ ToxCall::ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject *parent)
 ToxCall::~ToxCall()
 {
     qDebug() << "Delete call";
+
+    deleteOutput();
 }
 
 void ToxCall::startAudioOutput(QAudioDeviceInfo info)
 {
-    if (m_audioOutput)
-        delete m_audioOutput;
+    deleteOutput();
 
     ToxAvCSettings peerCodec;
     toxav_get_peer_csettings(m_toxAV, m_callIndex, m_peer, &peerCodec);
@@ -74,7 +74,7 @@ void ToxCall::startAudioOutput(QAudioDeviceInfo info)
 
     int bufferSize = outputFormat.bytesForDuration(peerCodec.audio_frame_duration*1000*32);
 
-    m_audioOutput = new QAudioOutput(info, outputFormat, this);
+    m_audioOutput = new QAudioOutput(info, outputFormat);
     m_audioOutput->setCategory("qTox"); //does not work
     m_audioOutput->setBufferSize(bufferSize); // buffer size needs tweaking (latency)
     m_audioDevice = m_audioOutput->start();
@@ -92,6 +92,17 @@ QAudioFormat ToxCall::getAudioOutputFormat() const
         return m_audioOutput->format();
 
     return QAudioFormat();
+}
+
+void ToxCall::deleteOutput()
+{
+    // workaround: bug in pulseAudio and/or Qt
+    if (m_audioOutput)
+    {
+        m_audioOutput->start(nullptr);
+        m_audioOutput->deleteLater();
+        m_audioOutput = nullptr;
+    }
 }
 
 /********************
@@ -322,7 +333,7 @@ void CoreAVModule::addNewCall(int callIndex, int peer)
     QMutexLocker lock(coreMutex());
 
     //create and insert the new call
-    ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer, this));
+    ToxCall::Ptr call = ToxCall::Ptr(new ToxCall(m_toxAV, callIndex, peer));
     call->startAudioOutput(m_audioOutputDeviceInfo);
 
     emit callStarted(callIndex, false);

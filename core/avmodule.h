@@ -66,17 +66,19 @@ struct ToxCodecSettings
  * ToxCall
  ********************/
 
-class ToxCall : public QObject
+class ToxCall
 {
-    Q_OBJECT
 public:
     using Ptr = QSharedPointer<ToxCall>;
-    ToxCall(ToxAv* toxAV, int callIndex, int peer, QObject* parent);
+    ToxCall(ToxAv* toxAV, int callIndex, int peer);
     ~ToxCall();
 
     void startAudioOutput(QAudioDeviceInfo info);
     void writeToOutputDev(QByteArray data);
     QAudioFormat getAudioOutputFormat() const;
+
+protected:
+    void deleteOutput();
 
 private:
     ToxAv* m_toxAV;
