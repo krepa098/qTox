@@ -14,25 +14,36 @@
     See the COPYING file for more details.
 */
 
-#ifndef ACTIONACTION_H
-#define ACTIONACTION_H
+#ifndef SPINNER_H
+#define SPINNER_H
 
-#include "messageaction.h"
+#include "../chatlinecontent.h"
 
-class ActionAction : public MessageAction
+#include <QTimer>
+#include <QObject>
+
+class Spinner : public QObject, public ChatLineContent
 {
+    Q_OBJECT
 public:
-    ActionAction(const QString &author, QString message, const QString& date, const bool&);
-    virtual ~ActionAction(){;}
-    virtual QString getRawMessage();
-    virtual bool isAction() {return true;}
+    Spinner(QSizeF size);
 
-protected:
-    virtual QString getMessage();
-    virtual QString getName();
+    virtual QRectF boundingRect() const;
+    virtual QRectF boundingSceneRect() const;
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    virtual void setWidth(qreal width);
+    virtual void visibilityChanged(bool visible);
+    virtual qreal getAscent() const;
+
+private slots:
+    void timeout();
 
 private:
-    QString message, rawMessage;
+    QSizeF size;
+    QPixmap pmap;
+    qreal rot;
+    QTimer timer;
+
 };
 
-#endif // MESSAGEACTION_H
+#endif // SPINNER_H

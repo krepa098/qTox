@@ -29,9 +29,7 @@
 #include "src/friend.h"
 #include "src/widget/friendwidget.h"
 #include "src/filetransferinstance.h"
-#include "src/widget/tool/chatactions/filetransferaction.h"
 #include "src/widget/netcamview.h"
-#include "src/widget/chatareawidget.h"
 #include "src/widget/tool/chattextedit.h"
 #include "src/core.h"
 #include "src/widget/widget.h"
@@ -40,6 +38,8 @@
 #include "src/misc/style.h"
 #include "src/misc/settings.h"
 #include "src/misc/cstring.h"
+#include "src/chatlog/chatmessage.h"
+#include "src/chatlog/content/filetransferwidget.h"
 
 ChatForm::ChatForm(Friend* chatFriend)
     : f(chatFriend)
@@ -73,7 +73,6 @@ ChatForm::ChatForm(Friend* chatFriend)
     connect(msgEdit, &ChatTextEdit::enterPressed, this, &ChatForm::onSendTriggered);
     connect(micButton, SIGNAL(clicked()), this, SLOT(onMicMuteToggle()));
     connect(volButton, SIGNAL(clicked()), this, SLOT(onVolMuteToggle()));
-    connect(chatWidget, &ChatAreaWidget::onFileTranfertInterract, this, &ChatForm::onFileTansBtnClicked);
     connect(Core::getInstance(), &Core::fileSendFailed, this, &ChatForm::onFileSendFailed);
     connect(this, SIGNAL(chatAreaCleared()), this, SLOT(clearReciepts()));
     connect(nameLabel, &CroppingLabel::textChanged, this, [=](QString text, QString orig)
@@ -118,7 +117,7 @@ void ChatForm::onSendTriggered()
         int id = HistoryKeeper::getInstance()->addChatEntry(f->getToxID().publicKey, qt_msg_hist,
                                                             Core::getInstance()->getSelfId().publicKey, timestamp, status);
 
-        MessageActionPtr ma = addSelfMessage(qt_msg, isAction, timestamp, false);
+        ChatMessage* ma = addSelfMessage(msg, isAction, timestamp, false);
 
         int rec;
         if (isAction)
@@ -164,17 +163,6 @@ void ChatForm::startFileSend(ToxFile file)
     if (file.friendId != f->getFriendID())
         return;
 
-    FileTransferInstance* fileTrans = new FileTransferInstance(file);
-    ftransWidgets.insert(fileTrans->getId(), fileTrans);
-
-    connect(Core::getInstance(), &Core::fileTransferInfo, fileTrans, &FileTransferInstance::onFileTransferInfo);
-    connect(Core::getInstance(), &Core::fileTransferCancelled, fileTrans, &FileTransferInstance::onFileTransferCancelled);
-    connect(Core::getInstance(), &Core::fileTransferFinished, fileTrans, &FileTransferInstance::onFileTransferFinished);
-    connect(Core::getInstance(), SIGNAL(fileTransferAccepted(ToxFile)), fileTrans, SLOT(onFileTransferAccepted(ToxFile)));
-    connect(Core::getInstance(), SIGNAL(fileTransferPaused(int,int,ToxFile::FileDirection)), fileTrans, SLOT(onFileTransferPaused(int,int,ToxFile::FileDirection)));
-    connect(Core::getInstance(), SIGNAL(fileTransferRemotePausedUnpaused(ToxFile,bool)), fileTrans, SLOT(onFileTransferRemotePausedUnpaused(ToxFile,bool)));
-    connect(Core::getInstance(), SIGNAL(fileTransferBrokenUnbroken(ToxFile, bool)), fileTrans, SLOT(onFileTransferBrokenUnbroken(ToxFile, bool)));
-
     QString name;
     if (!previousId.isMine())
     {
@@ -183,25 +171,14 @@ void ChatForm::startFileSend(ToxFile file)
         previousId = core->getSelfId();
     }
 
-    chatWidget->insertMessage(ChatActionPtr(new FileTransferAction(fileTrans, getElidedName(name),
-                                                                   QTime::currentTime().toString("hh:mm"), true)));
+
+    chatWidget->addFileTransferMessage(name, file, QDateTime::currentDateTime(), true);
 }
 
 void ChatForm::onFileRecvRequest(ToxFile file)
 {
     if (file.friendId != f->getFriendID())
         return;
-
-    FileTransferInstance* fileTrans = new FileTransferInstance(file);
-    ftransWidgets.insert(fileTrans->getId(), fileTrans);
-
-    connect(Core::getInstance(), &Core::fileTransferInfo, fileTrans, &FileTransferInstance::onFileTransferInfo);
-    connect(Core::getInstance(), &Core::fileTransferCancelled, fileTrans, &FileTransferInstance::onFileTransferCancelled);
-    connect(Core::getInstance(), &Core::fileTransferFinished, fileTrans, &FileTransferInstance::onFileTransferFinished);
-    connect(Core::getInstance(), SIGNAL(fileTransferAccepted(ToxFile)), fileTrans, SLOT(onFileTransferAccepted(ToxFile)));
-    connect(Core::getInstance(), SIGNAL(fileTransferPaused(int,int,ToxFile::FileDirection)), fileTrans, SLOT(onFileTransferPaused(int,int,ToxFile::FileDirection)));
-    connect(Core::getInstance(), SIGNAL(fileTransferRemotePausedUnpaused(ToxFile,bool)), fileTrans, SLOT(onFileTransferRemotePausedUnpaused(ToxFile,bool)));
-    connect(Core::getInstance(), SIGNAL(fileTransferBrokenUnbroken(ToxFile, bool)), fileTrans, SLOT(onFileTransferBrokenUnbroken(ToxFile, bool)));
 
     Widget* w = Widget::getInstance();
     if (!w->isFriendWidgetCurActiveWidget(f)|| w->isMinimized() || !w->isActiveWindow())
@@ -219,13 +196,14 @@ void ChatForm::onFileRecvRequest(ToxFile file)
         previousId = friendId;
     }
 
-    QString dateStr = QTime::currentTime().toString(Settings::getInstance().getTimestampFormat());
-    FileTransferAction *fa = new FileTransferAction(fileTrans, getElidedName(name), dateStr, false);
-    chatWidget->insertMessage(ChatActionPtr(fa));
-
+    ChatMessage* msg = chatWidget->addFileTransferMessage(name, file, QDateTime::currentDateTime(), false);
     if (!Settings::getInstance().getAutoAcceptDir(f->getToxID()).isEmpty()
-     || Settings::getInstance().getAutoSaveEnabled())
-        fileTrans->pressFromHtml("btnB");
+        || Settings::getInstance().getAutoSaveEnabled())
+    {
+        FileTransferWidget* tfWidget = dynamic_cast<FileTransferWidget*>(msg->getContent(1));
+        if(tfWidget)
+            tfWidget->acceptTransfer(Settings::getInstance().getAutoAcceptDir(f->getToxID()));
+    }
 }
 
 void ChatForm::onAvInvite(int FriendId, int CallId, bool video)
@@ -254,7 +232,7 @@ void ChatForm::onAvInvite(int FriendId, int CallId, bool video)
         connect(callButton, SIGNAL(clicked()), this, SLOT(onAnswerCallTriggered()));
     }
     
-    addSystemInfoMessage(tr("%1 is calling").arg(f->getDisplayedName()), "white", QDateTime::currentDateTime());
+    chatWidget->addSystemMessage(tr("%1 calling").arg(f->getDisplayedName()), QDateTime::currentDateTime());
 
     Widget* w = Widget::getInstance();
     if (!w->isFriendWidgetCurActiveWidget(f)|| w->isMinimized() || !w->isActiveWindow())
@@ -325,7 +303,7 @@ void ChatForm::onAvCancel(int FriendId, int)
 
     netcam->hide();
     
-    addSystemInfoMessage(tr("%1 stopped calling").arg(f->getDisplayedName()), "white", QDateTime::currentDateTime());        
+    addSystemInfoMessage(tr("%1 stopped calling").arg(f->getDisplayedName()), "white", QDateTime::currentDateTime());
 }
 
 void ChatForm::onAvEnd(int FriendId, int)
@@ -381,7 +359,7 @@ void ChatForm::onAvRinging(int FriendId, int CallId, bool video)
         connect(callButton, SIGNAL(clicked()), this, SLOT(onCancelCallTriggered()));
     }
     
-    addSystemInfoMessage(tr("Calling to %1").arg(f->getDisplayedName()), "white", QDateTime::currentDateTime());    
+    addSystemInfoMessage(tr("Calling to %1").arg(f->getDisplayedName()), "white", QDateTime::currentDateTime());
 }
 
 void ChatForm::onAvStarting(int FriendId, int CallId, bool video)
@@ -522,7 +500,7 @@ void ChatForm::onAvRejected(int FriendId, int)
     connect(callButton, SIGNAL(clicked()), this, SLOT(onCallTriggered()));
     connect(videoButton, SIGNAL(clicked()), this, SLOT(onVideoCallTriggered()));
     
-    addSystemInfoMessage(tr("Call rejected"), "white", QDateTime::currentDateTime());
+    chatWidget->addSystemMessage(tr("Call rejected"), QDateTime::currentDateTime());
 
     netcam->hide();
 }
@@ -656,18 +634,6 @@ void ChatForm::onVolMuteToggle()
     }
 }
 
-
-void ChatForm::onFileTansBtnClicked(QString widgetName, QString buttonName)
-{
-    uint id = widgetName.toUInt();
-
-    auto it = ftransWidgets.find(id);
-    if (it != ftransWidgets.end())
-        it.value()->pressFromHtml(buttonName);
-    else
-        qDebug() << "no filetransferwidget: " << id;
-}
-
 void ChatForm::onFileSendFailed(int FriendId, const QString &fname)
 {
     if (FriendId != f->getFriendID())
@@ -734,8 +700,9 @@ void ChatForm::loadHistory(QDateTime since, bool processUndelivered)
 
     ToxID storedPrevId;
     std::swap(storedPrevId, previousId);
-    QList<ChatActionPtr> historyMessages;
+    QList<ChatMessage*> historyMessages;
 
+    //TODO: possibly broken
     QDate lastDate(1,0,0);
     for (const auto &it : msgs)
     {
@@ -745,39 +712,37 @@ void ChatForm::loadHistory(QDateTime since, bool processUndelivered)
         if (msgDate > lastDate)
         {
             lastDate = msgDate;
-            historyMessages.append(genSystemInfoAction(msgDate.toString(),"",QDateTime()));
+            chatWidget->addSystemMessage(msgDate.toString(), QDateTime());
         }
 
         // Show each messages
         ToxID msgSender = ToxID::fromString(it.sender);
-        MessageActionPtr ca = genMessageActionAction(msgSender, it.message, false, msgDateTime);
+        ChatMessage* msg = chatWidget->addChatMessage(Core::getInstance()->getPeerName(msgSender), it.message, msgSender.isMine(), false);
         if (it.isSent || !msgSender.isMine())
         {
-            ca->markAsSent();
-        } else {
+            msg->markAsSent(msgDateTime);
+        }
+        else
+        {
             if (processUndelivered)
             {
-                int rec;
-                if (ca->isAction())
-                    rec = Core::getInstance()->sendAction(f->getFriendID(), ca->getRawMessage());
-                else
-                    rec = Core::getInstance()->sendMessage(f->getFriendID(), ca->getRawMessage());
-                registerReceipt(rec, it.id, ca);
+                int rec = Core::getInstance()->sendMessage(f->getFriendID(), msg->toString());
+                registerReceipt(rec, it.id, msg);
             }
         }
-        historyMessages.append(ca);
+        historyMessages.append(msg);
     }
     std::swap(storedPrevId, previousId);
 
-    int savedSliderPos = chatWidget->verticalScrollBar()->maximum() - chatWidget->verticalScrollBar()->value();
+//    int savedSliderPos = chatWidget->verticalScrollBar()->maximum() - chatWidget->verticalScrollBar()->value();
 
-    if (earliestMessage != nullptr)
-        *earliestMessage = since;
+//    if (earliestMessage != nullptr)
+//        *earliestMessage = since;
 
-    chatWidget->insertMessagesTop(historyMessages);
+//    chatWidget->insertMessagesTop(historyMessages);
 
-    savedSliderPos = chatWidget->verticalScrollBar()->maximum() - savedSliderPos;
-    chatWidget->verticalScrollBar()->setValue(savedSliderPos);
+//    savedSliderPos = chatWidget->verticalScrollBar()->maximum() - savedSliderPos;
+//    chatWidget->verticalScrollBar()->setValue(savedSliderPos);
 }
 
 void ChatForm::onLoadHistory()
@@ -807,9 +772,8 @@ void ChatForm::stopCounter()
 {
     if (timer)
     {
-        addSystemInfoMessage(tr("Call with %1 ended. %2").arg(f->getDisplayedName(),
-                                                              secondsToDHMS(timeElapsed.elapsed()/1000)),
-                             "white", QDateTime::currentDateTime());
+        addSystemInfoMessage(tr("Call with %1 ended. %2").arg(f->getDisplayedName(),secondsToDHMS(timeElapsed.elapsed()/1000)),
+                                                              "white", QDateTime::currentDateTime());
         timer->stop();
         callDuration->setText("");
         callDuration->hide();
@@ -846,7 +810,7 @@ QString ChatForm::secondsToDHMS(quint32 duration)
     return cD + res.sprintf("%dd%02dh %02dm %02ds", days, hours, minutes, seconds);
 }
 
-void ChatForm::registerReceipt(int receipt, int messageID, MessageActionPtr msg)
+void ChatForm::registerReceipt(int receipt, int messageID, ChatMessage* msg)
 {
     receipts[receipt] = messageID;
     undeliveredMsgs[messageID] = msg;
@@ -862,8 +826,7 @@ void ChatForm::dischargeReceipt(int receipt)
         if (msgIt != undeliveredMsgs.end())
         {
             HistoryKeeper::getInstance()->markAsSent(mID);
-            msgIt.value()->markAsSent();
-            msgIt.value()->featureUpdate();
+            msgIt.value()->markAsSent(QDateTime::currentDateTime());
             undeliveredMsgs.erase(msgIt);
         }
         receipts.erase(it);
@@ -881,12 +844,12 @@ void ChatForm::deliverOfflineMsgs()
     if (!Settings::getInstance().getFauxOfflineMessaging())
         return;
 
-    QMap<int, MessageActionPtr> msgs = undeliveredMsgs;
+    QMap<int, ChatMessage*> msgs = undeliveredMsgs;
     clearReciepts();
 
     for (auto iter = msgs.begin(); iter != msgs.end(); iter++)
     {
-        QString messageText = iter.value()->getRawMessage();
+        QString messageText = iter.value()->toString();
         int rec;
         if (iter.value()->isAction())
             rec = Core::getInstance()->sendAction(f->getFriendID(), messageText);

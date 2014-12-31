@@ -14,30 +14,19 @@
     See the COPYING file for more details.
 */
 
-#ifndef MESSAGEACTION_H
-#define MESSAGEACTION_H
+#ifndef CUSTOMTEXTDOCUMENT_H
+#define CUSTOMTEXTDOCUMENT_H
 
-#include "chataction.h"
+#include <QTextDocument>
 
-class MessageAction : public ChatAction
+class CustomTextDocument : public QTextDocument
 {
+    Q_OBJECT
 public:
-    MessageAction(const QString &author, const QString &message, const QString &date, const bool &me);
-    virtual ~MessageAction(){;}
-    virtual void featureUpdate();
-    void markAsSent();
-    virtual QString getRawMessage();
-    virtual bool isAction() {return false;}
+    explicit CustomTextDocument(QObject *parent = 0);
 
 protected:
-    virtual QString getMessage();
-    virtual QString getMessage(QString div);
-
-protected:
-    QString message;
-    bool isProcessed;
+    virtual QVariant loadResource(int type, const QUrl &name);
 };
 
-typedef QSharedPointer<MessageAction> MessageActionPtr;
-
-#endif // MESSAGEACTION_H
+#endif // CUSTOMTEXTDOCUMENT_H

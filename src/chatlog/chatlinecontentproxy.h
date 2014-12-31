@@ -14,24 +14,26 @@
     See the COPYING file for more details.
 */
 
-#ifndef FILETRANSFERACTION_H
-#define FILETRANSFERACTION_H
+#ifndef CHATLINECONTENTPROXY_H
+#define CHATLINECONTENTPROXY_H
 
-#include "chataction.h"
+#include <QGraphicsProxyWidget>
+#include "chatlinecontent.h"
 
-class FileTransferAction : public ChatAction
+class ChatLineContentProxy : public ChatLineContent
 {
-    Q_OBJECT
 public:
-    FileTransferAction(FileTransferInstance *widget, const QString &author, const QString &date, const bool &me);
-    virtual ~FileTransferAction();
-    virtual bool isInteractive();
+    ChatLineContentProxy(QWidget* widget);
 
-protected:
-    virtual QString getMessage();
+    virtual QRectF boundingRect() const;
+    virtual QRectF boundingSceneRect() const;
+    virtual void setWidth(qreal width);
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    virtual qreal getAscent() const;
 
 private:
-    FileTransferInstance *w;
+    QGraphicsProxyWidget* proxy;
+
 };
 
-#endif // FILETRANSFERACTION_H
+#endif // CHATLINECONTENTPROXY_H

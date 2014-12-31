@@ -34,7 +34,8 @@ FORMS    += \
     src/widget/form/loadhistorydialog.ui \
     src/widget/form/inputpassworddialog.ui \
     src/widget/form/setpassworddialog.ui \
-    src/widget/form/settings/advancedsettings.ui
+    src/widget/form/settings/advancedsettings.ui \
+    src/chatlog/content/filetransferwidget.ui
     
 CONFIG   += c++11
 
@@ -148,17 +149,10 @@ HEADERS  += src/widget/form/addfriendform.h \
     src/widget/friendlistwidget.h \
     src/widget/genericchatroomwidget.h \
     src/widget/form/genericchatform.h \
-    src/widget/tool/chatactions/chataction.h \
-    src/widget/chatareawidget.h \
     src/filetransferinstance.h \
     src/corestructs.h \
     src/coredefines.h \
     src/coreav.h \
-    src/widget/tool/chatactions/messageaction.h \
-    src/widget/tool/chatactions/filetransferaction.h \
-    src/widget/tool/chatactions/systemmessageaction.h \
-    src/widget/tool/chatactions/actionaction.h \
-    src/widget/tool/chatactions/alertaction.h \
     src/widget/maskablepixmapwidget.h \
     src/video/videosource.h \
     src/video/cameraworker.h \
@@ -180,7 +174,17 @@ HEADERS  += src/widget/form/addfriendform.h \
     src/autoupdate.h \
     src/misc/serialize.h \
     src/widget/form/settings/advancedform.h \
-    src/audio.h
+    src/audio.h \
+    src/chatlog/chatlog.h \
+    src/chatlog/chatline.h \
+    src/chatlog/chatlinecontent.h \
+    src/chatlog/chatlinecontentproxy.h \
+    src/chatlog/content/text.h \
+    src/chatlog/content/spinner.h \
+    src/chatlog/content/filetransferwidget.h \
+    src/chatlog/chatmessage.h \
+    src/chatlog/content/image.h \
+    src/chatlog/customtextdocument.h
 
 SOURCES += \
     src/widget/form/addfriendform.cpp \
@@ -217,15 +221,8 @@ SOURCES += \
     src/coreav.cpp \
     src/widget/genericchatroomwidget.cpp \
     src/widget/form/genericchatform.cpp \
-    src/widget/tool/chatactions/chataction.cpp \
-    src/widget/chatareawidget.cpp \
     src/filetransferinstance.cpp \
     src/corestructs.cpp \
-    src/widget/tool/chatactions/messageaction.cpp \
-    src/widget/tool/chatactions/filetransferaction.cpp \
-    src/widget/tool/chatactions/systemmessageaction.cpp \
-    src/widget/tool/chatactions/actionaction.cpp \
-    src/widget/tool/chatactions/alertaction.cpp \
     src/widget/maskablepixmapwidget.cpp \
     src/video/cameraworker.cpp \
     src/widget/videosurface.cpp \
@@ -247,7 +244,17 @@ SOURCES += \
     src/autoupdate.cpp \
     src/misc/serialize.cpp \
     src/widget/form/settings/advancedform.cpp \
-    src/audio.cpp
+    src/audio.cpp \
+    src/chatlog/chatlog.cpp \
+    src/chatlog/chatline.cpp \
+    src/chatlog/chatlinecontent.cpp \
+    src/chatlog/chatlinecontentproxy.cpp \
+    src/chatlog/content/text.cpp \
+    src/chatlog/content/spinner.cpp \
+    src/chatlog/content/filetransferwidget.cpp \
+    src/chatlog/chatmessage.cpp \
+    src/chatlog/content/image.cpp \
+    src/chatlog/customtextdocument.cpp
 
 contains(DEFINES, QTOX_FILTER_AUDIO) {
     HEADERS += src/audiofilterer.h

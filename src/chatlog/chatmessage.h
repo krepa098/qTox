@@ -14,14 +14,27 @@
     See the COPYING file for more details.
 */
 
-#include "alertaction.h"
+#ifndef CHATMESSAGE_H
+#define CHATMESSAGE_H
 
-AlertAction::AlertAction(const QString &author, const QString &message, const QString &date) :
-    MessageAction(author, message, date, false)
-{
-}
+#include "chatline.h"
 
-QString AlertAction::getMessage()
+class QGraphicsScene;
+
+class ChatMessage : public ChatLine
 {
-    return MessageAction::getMessage("alert");
-}
+public:
+     ChatMessage(QGraphicsScene* scene, const QString& rawMessage);
+
+    void markAsSent(const QDateTime& time);
+    QString toString() const;
+    bool isAction() const;
+    void setAsAction();
+
+private:
+    ChatLineContent* midColumn = nullptr;
+    QString rawString;
+    bool action = false;
+};
+
+#endif // CHATMESSAGE_H

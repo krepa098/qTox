@@ -81,7 +81,6 @@ private slots:
     void onAnswerCallTriggered();
     void onHangupCallTriggered();
     void onCancelCallTriggered();
-    void onFileTansBtnClicked(QString widgetName, QString buttonName);
     void onFileSendFailed(int FriendId, const QString &fname);
     void onLoadHistory();
     void updateTime();    
@@ -90,7 +89,7 @@ protected:
     // drag & drop
     void dragEnterEvent(QDragEnterEvent* ev);
     void dropEvent(QDropEvent* ev);
-    void registerReceipt(int receipt, int messageID, MessageActionPtr msg);
+    void registerReceipt(int receipt, int messageID, ChatMessage* msg);
 
 private:
     Friend* f;
@@ -106,7 +105,7 @@ private:
     void stopCounter();
     QString secondsToDHMS(quint32 duration);
     QHash<int, int> receipts;
-    QMap<int, MessageActionPtr> undeliveredMsgs;
+    QMap<int, ChatMessage*> undeliveredMsgs;
 };
 
 #endif // CHATFORM_H

@@ -14,26 +14,26 @@
     See the COPYING file for more details.
 */
 
-#include "actionaction.h"
-#include <QDebug>
+#ifndef IMAGE_H
+#define IMAGE_H
 
-ActionAction::ActionAction(const QString &author, QString message, const QString &date, const bool& me) :
-    MessageAction(author, author+" "+message, date, me)
-{
-    rawMessage = message;
-}
+#include "../chatlinecontent.h"
 
-QString ActionAction::getName()
+class Image : public QObject, public ChatLineContent
 {
-    return QString("<div class=action>*</div>");
-}
+public:
+    Image(QSizeF size, const QString &filename);
 
-QString ActionAction::getMessage()
-{
-    return MessageAction::getMessage("action");
-}
+    virtual QRectF boundingRect() const;
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    virtual void setWidth(qreal width);
+    virtual QRectF boundingSceneRect() const;
+    virtual qreal getAscent() const;
 
-QString ActionAction::getRawMessage()
-{
-    return rawMessage;
-}
+private:
+    QSizeF size;
+    QPixmap pmap;
+
+};
+
+#endif // IMAGE_H

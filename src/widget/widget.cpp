@@ -749,7 +749,7 @@ void Widget::onFriendStatusChanged(int friendId, Status status)
         }
         if (isActualChange)
             f->getChatForm()->addSystemInfoMessage(tr("%1 is now %2", "e.g. \"Dubslow is now online\"").arg(f->getDisplayedName()).arg(fStatus),
-                                          "white", QDateTime::currentDateTime());
+                                                   "white", QDateTime::currentDateTime());
     }
 
     if (isActualChange && status != Status::Offline)
@@ -986,17 +986,18 @@ void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Cha
     {
         if (name.isEmpty())
             name = tr("<Unknown>", "Placeholder when we don't know someone's name in a group chat");
-        // g->addPeer(peernumber,name);
+
         g->regeneratePeerList();
-        //g->chatForm->addSystemInfoMessage(tr("%1 has joined the chat").arg(name), "green");
+        // g->addPeer(peernumber,name);
+        g->chatForm->getChatLog()->addSystemMessage(tr("%1 has joined the chat").arg(name), QDateTime::currentDateTime());
         // we can't display these messages until irungentoo fixes peernumbers
         // https://github.com/irungentoo/toxcore/issues/1128
     }
     else if (change == TOX_CHAT_CHANGE_PEER_DEL)
     {
-        // g->removePeer(peernumber);
         g->regeneratePeerList();
-        //g->chatForm->addSystemInfoMessage(tr("%1 has left the chat").arg(name), "silver");
+        // g->removePeer(peernumber);
+        g->chatForm->getChatLog()->addSystemMessage(tr("%1 has left the chat").arg(name), QDateTime::currentDateTime());
     }
     else if (change == TOX_CHAT_CHANGE_PEER_NAME) // core overwrites old name before telling us it changed...
         g->updatePeer(peernumber,core->getGroupPeerName(groupnumber, peernumber));
@@ -1161,7 +1162,7 @@ void Widget::onGroupSendResult(int groupId, const QString& message, int result)
         return;
 
     if (result == -1)
-        g->getChatForm()->addSystemInfoMessage(tr("Message failed to send"), "red", QDateTime::currentDateTime());
+        g->chatForm->getChatLog()->addSystemMessage(tr("Message failed to send"), QDateTime::currentDateTime());
 }
 
 void Widget::getPassword(QString info, int passtype, uint8_t* salt)

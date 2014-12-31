@@ -311,14 +311,13 @@ void GeneralForm::reloadSmiles()
     for (int i = 0; i < emoticons.size(); i++)
         smiles.push_front(emoticons.at(i).first());
 
-    int pixSize = 30;
-    bodyUI->smile1->setPixmap(SmileyPack::getInstance().getAsIcon(smiles[0]).pixmap(pixSize, pixSize));
-    bodyUI->smile2->setPixmap(SmileyPack::getInstance().getAsIcon(smiles[1]).pixmap(pixSize, pixSize));
-    bodyUI->smile3->setPixmap(SmileyPack::getInstance().getAsIcon(smiles[2]).pixmap(pixSize, pixSize));
-    bodyUI->smile4->setPixmap(SmileyPack::getInstance().getAsIcon(smiles[3]).pixmap(pixSize, pixSize));
-    bodyUI->smile5->setPixmap(SmileyPack::getInstance().getAsIcon(smiles[4]).pixmap(pixSize, pixSize));
-
-    bodyUI->smile1->setToolTip(smiles[0]);
+    bodyUI->smile1->setPixmap(SmileyPack::getInstance().getAsPixmap(smiles[0]));
+    bodyUI->smile2->setPixmap(SmileyPack::getInstance().getAsPixmap(smiles[1]));
+    bodyUI->smile3->setPixmap(SmileyPack::getInstance().getAsPixmap(smiles[2]));
+    bodyUI->smile4->setPixmap(SmileyPack::getInstance().getAsPixmap(smiles[3]));
+    bodyUI->smile5->setPixmap(SmileyPack::getInstance().getAsPixmap(smiles[4]));
+    
+    bodyUI->smile1->setToolTip(smiles[0]);    
     bodyUI->smile2->setToolTip(smiles[1]);
     bodyUI->smile3->setToolTip(smiles[2]);
     bodyUI->smile4->setToolTip(smiles[3]);

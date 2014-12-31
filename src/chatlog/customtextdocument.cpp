@@ -14,24 +14,23 @@
     See the COPYING file for more details.
 */
 
-#ifndef SYSTEMMESSAGEACTION_H
-#define SYSTEMMESSAGEACTION_H
+#include "customtextdocument.h"
+#include "../misc/smileypack.h"
+#include "../misc/style.h"
 
-#include "chataction.h"
+#include <QIcon>
+#include <QDebug>
 
-class SystemMessageAction : public ChatAction
+CustomTextDocument::CustomTextDocument(QObject *parent)
+    : QTextDocument(parent)
 {
-public:
-    SystemMessageAction(const QString &message, const QString& type, const QString &date);
-    virtual ~SystemMessageAction(){;}
+    setDefaultStyleSheet(Style::getStylesheet(":ui/chatArea/innerStyle.css"));
+}
 
-protected:
-    virtual QString getName() {return QString();}
-    virtual QString getMessage();
+QVariant CustomTextDocument::loadResource(int type, const QUrl &name)
+{
+    if (type == QTextDocument::ImageResource && name.scheme() == "key")
+        return SmileyPack::getInstance().getAsPixmap(name.fileName());
 
-private:
-    QString message;
-    QString type;
-};
-
-#endif // SYSTEMMESSAGEACTION_H
+    return QTextDocument::loadResource(type, name);
+}

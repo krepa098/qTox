@@ -14,16 +14,36 @@
     See the COPYING file for more details.
 */
 
-#include "systemmessageaction.h"
+#include "chatmessage.h"
+#include "content/text.h"
+#include "content/spinner.h"
 
-SystemMessageAction::SystemMessageAction(const QString &message, const QString &type, const QString &date) :
-    ChatAction(false, QString(), date),
-    message(message),
-    type(type)
+#include <QDateTime>
+
+ChatMessage::ChatMessage(QGraphicsScene* scene, const QString& rawMessage)
+    : ChatLine(scene)
+    , rawString(rawMessage)
 {
+
 }
 
-QString SystemMessageAction::getMessage()
+void ChatMessage::markAsSent(const QDateTime &time)
 {
-    return QString("<table width=100%><tr><td align=center><div class=" + type + ">" + toHtmlChars(message) + "</td><tr></div></table>");
+    // remove the spinner and replace it by $time
+    replaceContent(2, new Text(time.toString("hh:mm")));
+}
+
+QString ChatMessage::toString() const
+{
+    return rawString;
+}
+
+bool ChatMessage::isAction() const
+{
+    return action;
+}
+
+void ChatMessage::setAsAction()
+{
+    action = true;
 }
