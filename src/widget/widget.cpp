@@ -989,7 +989,7 @@ void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Cha
 
         g->regeneratePeerList();
         // g->addPeer(peernumber,name);
-        g->chatForm->getChatLog()->addSystemMessage(tr("%1 has joined the chat").arg(name), QDateTime::currentDateTime());
+        g->getChatForm()->addSystemInfoMessage(tr("%1 has joined the chat").arg(name), "white", QDateTime::currentDateTime());
         // we can't display these messages until irungentoo fixes peernumbers
         // https://github.com/irungentoo/toxcore/issues/1128
     }
@@ -997,7 +997,7 @@ void Widget::onGroupNamelistChanged(int groupnumber, int peernumber, uint8_t Cha
     {
         g->regeneratePeerList();
         // g->removePeer(peernumber);
-        g->chatForm->getChatLog()->addSystemMessage(tr("%1 has left the chat").arg(name), QDateTime::currentDateTime());
+        g->getChatForm()->addSystemInfoMessage(tr("%1 has left the chat").arg(name), "white", QDateTime::currentDateTime());
     }
     else if (change == TOX_CHAT_CHANGE_PEER_NAME) // core overwrites old name before telling us it changed...
         g->updatePeer(peernumber,core->getGroupPeerName(groupnumber, peernumber));
@@ -1162,7 +1162,7 @@ void Widget::onGroupSendResult(int groupId, const QString& message, int result)
         return;
 
     if (result == -1)
-        g->chatForm->getChatLog()->addSystemMessage(tr("Message failed to send"), QDateTime::currentDateTime());
+        g->getChatForm()->addSystemInfoMessage(tr("Message failed to send"), "white", QDateTime::currentDateTime());
 }
 
 void Widget::getPassword(QString info, int passtype, uint8_t* salt)
