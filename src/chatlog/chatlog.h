@@ -19,7 +19,7 @@
 
 #include <QGraphicsView>
 #include <QDateTime>
-#include <QMarginsF>
+#include <QMargins>
 
 #include "chatline.h"
 #include "chatmessage.h"
